@@ -38,12 +38,14 @@ drop table if exists match cascade;
 -- This is done because the systems available hardly enable one to tell if two match in two different match histories are actually the same
 create table match(
 	id serial primary key,
+	-- The player whose perspective the match is being recorded from
+	summoner_id integer references summoner(id) not null,
 	-- The map the match was played on
 	map map_type not null,
 	-- Queue type or custom game mode indicator
 	match_type match_type_type not null,
-	-- The player whose perspective the match is being recorded from
-	summoner_id integer references summoner(id) not null,
+	-- The time the match finished, as UTC
+	time timestamp not null,
 	-- True if the player won the match
 	victory boolean not null,
 	-- Champion played by the player
@@ -70,3 +72,32 @@ create table match(
 
 -- Index for looking up matches played by a player
 create index match_summoner_id_index on match(summoner_id);
+
+-- Aggregated statistics of players, by game mode and by champion, for all matches recorded
+create table aggregated_statistics(
+	id serial primary key,
+	-- The player the stats are being recorded for
+	summoner_id integer references summoner(id) not null,
+	-- The map the matches were played on
+	map map_type not null,
+	-- Queue type or custom game mode indicator for the matches
+	match_type match_type_type not null,
+	-- Champion played by the player
+	champion_id integer not null,
+	-- Number of wins and losses with this configuration
+	wins integer not null,
+	losses integer not null,
+	-- Total number of kills, deaths and assists of the player in these matches
+	kills integer not null,
+	deaths integer not null,
+	assists integer not null,
+	-- Total amount of gold earned by the player in these matches
+	gold integer not null,
+	-- Total number of minions killed by the player in these matches
+	minions_killed integer not null,
+	-- Total duration of all matches for this configuration, in seconds
+	duration integer not null
+);
+
+-- Index for looking up records of a player for a certain mode
+create aggregated_statistics_map_match_type_summoner_id_index on aggregated_statistics(map, match_type, summoner_id);
