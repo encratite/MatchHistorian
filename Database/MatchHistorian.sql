@@ -1,6 +1,6 @@
 set client_min_messages to warning;
 
-drop type if exists map_type;
+drop type if exists map_type cascade;
 
 create type map_type as enum (
 	'twisted_treeline',
@@ -8,7 +8,7 @@ create type map_type as enum (
 	'howling_abyss'
 );
 
-drop type if exists match_type_type;
+drop type if exists match_type_type cascade;
 
 create type match_type_type as enum (
 	'normal',
@@ -30,7 +30,7 @@ create table summoner(
 );
 
 -- Index for looking up summoners based summoner IDs in requests by users and also to resolve other players within a match
-create index summoner_id_index on summoner(summoner_id);
+create index summoner_id_index on summoner (summoner_id);
 
 drop table if exists match cascade;
 
@@ -71,7 +71,12 @@ create table match(
 );
 
 -- Index for looking up matches played by a player
-create index match_summoner_id_index on match(summoner_id);
+create index match_summoner_id_index on match (summoner_id);
+
+-- This big index is used to determine if a game was already recorded in the database
+create index match_record_index on match (summoner_id, map, match_type, time, victory, champion_id, kills, deaths, assists, items, gold, minions_killed, duration, losing_team, winning_team);
+
+drop table if exists aggregated_statistics cascade;
 
 -- Aggregated statistics of players, by game mode and by champion, for all matches recorded
 create table aggregated_statistics(
@@ -100,4 +105,4 @@ create table aggregated_statistics(
 );
 
 -- Index for looking up records of a player for a certain mode
-create aggregated_statistics_map_match_type_summoner_id_index on aggregated_statistics(map, match_type, summoner_id);
+create index aggregated_statistics_lookup_index on aggregated_statistics (map, match_type, summoner_id);
