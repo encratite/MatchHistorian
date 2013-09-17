@@ -1,0 +1,72 @@
+set client_min_messages to warning;
+
+drop type if exists map_type;
+
+create type map_type as enum (
+	'twisted_treeline',
+	'summoners_rift',
+	'howling_abyss'
+);
+
+drop type if exists match_type_type;
+
+create type match_type_type as enum (
+	'normal',
+	'ranked_solo',
+	'ranked_team',
+	'custom'
+);
+
+drop table if exists summoner cascade;
+
+create table summoner(
+	id serial primary key,
+	-- A string that specifies the region such as 'na', 'euw' or 'eune'
+	region text not null,
+	-- Numeric ID of the summoner in that region
+	summoner_id integer not null,
+	-- Last known name of that summoner
+	name text not null
+);
+
+-- Index for looking up summoners based summoner IDs in requests by users and also to resolve other players within a match
+create index summoner_id_index on summoner(summoner_id);
+
+drop table if exists match cascade;
+
+-- Matches are stored in a redundant way, one time for each player that is being tracked
+-- This is done because the systems available hardly enable one to tell if two match in two different match histories are actually the same
+create table match(
+	id serial primary key,
+	-- The map the match was played on
+	map map_type not null,
+	-- Queue type or custom game mode indicator
+	match_type match_type_type not null,
+	-- The player whose perspective the match is being recorded from
+	summoner_id integer references summoner(id) not null,
+	-- True if the player won the match
+	victory boolean not null,
+	-- Champion played by the player
+	champion_id integer not null,
+	-- Kills, deaths and assists of the player
+	kills integer not null,
+	deaths integer not null,
+	assists integer not null,
+	-- Array of IDs of items owned by the player
+	-- Null entries indicate an empty slot
+	-- Warning, size of array is ignored by the DBMS
+	items integer[6] not null,
+	-- Gold earned by the player
+	gold integer not null,
+	-- Number of minions killed by the player
+	minions_killed integer not null,
+	-- Duration of the match, in seconds
+	duration integer not null,
+	-- Summoner IDs of other players in the game
+	-- The victorious flag could be calculated dynamically from this data but it would likely slow down some queries
+	losing_team integer[] not null,
+	winning_team integer[] not null
+);
+
+-- Index for looking up matches played by a player
+create index match_summoner_id_index on match(summoner_id);
