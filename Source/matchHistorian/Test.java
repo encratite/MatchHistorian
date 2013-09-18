@@ -46,7 +46,12 @@ class Test {
 					"<div class=\\\"match_(win|loss)\\\" data-game-id=\\\"(\\d+)\\\">.+?" +
 					"url\\(\\/\\/lkimg\\.zamimg\\.com\\/shared\\/riot\\/images\\/champions\\/(\\d+)_92\\.png\\).+?" +
 					"<div style=\\\"font-size: 12px; font-weight: bold;\\\">(.+?)<\\/div>.+?" +
-					"data-hoverswitch=\\\"(\\d+\\/\\d+\\/\\d+ \\d+:\\d+(?:AM|PM) .+?)\\\">",
+					"data-hoverswitch=\\\"(\\d+\\/\\d+\\/\\d+ \\d+:\\d+(?:AM|PM) .+?)\\\">.+?" +
+					"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Kills<\\/span><br \\/>.+?" +
+					"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Deaths<\\/span><br \\/>.+?" +
+					"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Assists<\\/span>.+?" +
+					"<strong>(\\d+)\\.(\\d)k</strong><div class=\\\"match_details_cell_label\\\">Gold</div>.+?" +
+					"<strong>(\\d+)</strong><div class=\\\"match_details_cell_label\\\">Minions<\\/div>",
 					Pattern.DOTALL
 			);
 			Matcher matcher = pattern.matcher(content);
@@ -65,14 +70,28 @@ class Test {
 					String mode = matcher.group(4);
 					String dateString = matcher.group(5);
 					Date date = inputDateFormat.parse(dateString);
+					String killsString = matcher.group(6);
+					int kills = Integer.parseInt(killsString);
+					String deathsString = matcher.group(7);
+					int deaths = Integer.parseInt(deathsString);
+					String assistsString = matcher.group(8);
+					int assists = Integer.parseInt(assistsString);
+					String goldIntegerString = matcher.group(9);
+					int goldInteger = Integer.parseInt(goldIntegerString);
+					String goldFractionString = matcher.group(10);
+					int goldFraction = Integer.parseInt(goldFractionString);
+					int gold = goldInteger * 1000 + goldFraction * 100;
+					String minionsString = matcher.group(11);
+					int minions = Integer.parseInt(minionsString);
 					System.out.println("Game " + counter + ":");
 					System.out.println("Win: " + win);
 					System.out.println("Game ID: " + gameId);
 					System.out.println("Champion ID: " + championId);
 					System.out.println("Mode: " + mode);
-					// System.out.println("Date string: " + dateString);
 					System.out.println("Date: " + outputDateFormat.format(date));
-					// System.out.println("Offset: " + matcher.start() + ", " + matcher.end());
+					System.out.println("K/D/A: " + kills + "/" + deaths + "/" + assists);
+					System.out.println("Gold: " + gold);
+					System.out.println("Minions: " + minions);
 				}
 				catch(NumberFormatException exception) {
 				}
