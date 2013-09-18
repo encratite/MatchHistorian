@@ -8,9 +8,9 @@ create type map_type as enum (
 	'howling_abyss'
 );
 
-drop type if exists match_type_type cascade;
+drop type if exists game_type_type cascade;
 
-create type match_type_type as enum (
+create type game_type_type as enum (
 	'normal',
 	'ranked_solo',
 	'ranked_team',
@@ -29,25 +29,25 @@ create table summoner(
 	name text not null
 );
 
--- Index for looking up summoners based summoner IDs in requests by users and also to resolve other players within a match
+-- Index for looking up summoners based summoner IDs in requests by users and also to resolve other players within a game
 create index summoner_id_index on summoner (summoner_id);
 
-drop table if exists match cascade;
+drop table if exists game cascade;
 
--- Matches are stored in a redundant way, one time for each player that is being tracked
--- This is done because the systems available hardly enable one to tell if two match in two different match histories are actually the same
-create table match(
+-- Games are stored in a redundant way, one time for each player that is being tracked
+-- This is done because the systems available hardly enable one to tell if two game in two different game histories are actually the same
+create table game(
 	id serial primary key,
-	-- The player whose perspective the match is being recorded from
-	summoner_id integer references summoner(id) not null,
-	-- The map the match was played on
+	-- Region the game was played on
+	region text not null,
+	-- ID of the game on the server
+	game_id integer not null,
+	-- The map the game was played on
 	map map_type not null,
 	-- Queue type or custom game mode indicator
-	match_type match_type_type not null,
-	-- The time the match finished, as UTC
+	game_type game_type_type not null,
+	-- The time the game finished, as UTC
 	time timestamp not null,
-	-- True if the player won the match
-	victory boolean not null,
 	-- Champion played by the player
 	champion_id integer not null,
 	-- Kills, deaths and assists of the player
@@ -62,47 +62,46 @@ create table match(
 	gold integer not null,
 	-- Number of minions killed by the player
 	minions_killed integer not null,
-	-- Duration of the match, in seconds
+	-- Duration of the game, in seconds
 	duration integer not null,
 	-- Summoner IDs of other players in the game
-	-- The victorious flag could be calculated dynamically from this data but it would likely slow down some queries
 	losing_team integer[] not null,
 	winning_team integer[] not null
 );
 
--- Index for looking up matches played by a player
-create index match_summoner_id_index on match (summoner_id);
+-- Index for checking if a match is already in the database
+create index game_region_game_id_index on game (region, game_id);
 
--- This big index is used to determine if a game was already recorded in the database
-create index match_record_index on match (summoner_id, map, match_type, time, victory, champion_id, kills, deaths, assists, items, gold, minions_killed, duration, losing_team, winning_team);
+-- Index for looking up Games played by a player
+create index game_summoner_id_index on game (summoner_id);
 
 drop table if exists aggregated_statistics cascade;
 
--- Aggregated statistics of players, by game mode and by champion, for all matches recorded
+-- Aggregated statistics of players, by game mode and by champion, for all games recorded
 create table aggregated_statistics(
 	id serial primary key,
 	-- The player the stats are being recorded for
 	summoner_id integer references summoner(id) not null,
-	-- The map the matches were played on
+	-- The map the games were played on
 	map map_type not null,
-	-- Queue type or custom game mode indicator for the matches
-	match_type match_type_type not null,
+	-- Queue type or custom game mode indicator for the games
+	game_type game_type_type not null,
 	-- Champion played by the player
 	champion_id integer not null,
 	-- Number of wins and losses with this configuration
 	wins integer not null,
 	losses integer not null,
-	-- Total number of kills, deaths and assists of the player in these matches
+	-- Total number of kills, deaths and assists of the player in these games
 	kills integer not null,
 	deaths integer not null,
 	assists integer not null,
-	-- Total amount of gold earned by the player in these matches
+	-- Total amount of gold earned by the player in these games
 	gold integer not null,
-	-- Total number of minions killed by the player in these matches
+	-- Total number of minions killed by the player in these games
 	minions_killed integer not null,
-	-- Total duration of all matches for this configuration, in seconds
+	-- Total duration of all games for this configuration, in seconds
 	duration integer not null
 );
 
 -- Index for looking up records of a player for a certain mode
-create index aggregated_statistics_lookup_index on aggregated_statistics (map, match_type, summoner_id);
+create index aggregated_statistics_lookup_index on aggregated_statistics (map, game_type, summoner_id);
