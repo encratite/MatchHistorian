@@ -38,7 +38,7 @@ class Test {
 			System.out.println("Length: " + content.length());
 			System.out.println("Duration: " + duration + " ms");
 			/*
-			PrintWriter writer = new PrintWriter("output.html");
+			PrintWriter writer = new PrintWriter("Output/summoner.html");
 			writer.write(content);
 			writer.close();
 			*/
