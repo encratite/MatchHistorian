@@ -34,8 +34,6 @@ create index summoner_id_index on summoner (summoner_id);
 
 drop table if exists game cascade;
 
--- Games are stored in a redundant way, one time for each player that is being tracked
--- This is done because the systems available hardly enable one to tell if two game in two different game histories are actually the same
 create table game(
 	id serial primary key,
 	-- Region the game was played on
@@ -48,6 +46,23 @@ create table game(
 	game_type game_type_type not null,
 	-- The time the game finished, as UTC
 	time timestamp not null,
+	-- Duration of the game, in seconds
+	duration integer not null,
+	-- Summoner IDs of other players in the game
+	losing_team integer[] not null,
+	winning_team integer[] not null
+);
+
+-- Index for checking if a match is already in the database
+create index game_region_game_id_index on game (region, game_id);
+
+-- Information about a  particular player that participated in a game
+create table game_player(
+	id serial primary key,
+	-- The game this record is associated with
+	game_id integer references game(id),
+	-- The summoner the stats are associated with
+	summoner_id integer references summoner(id),
 	-- Champion played by the player
 	champion_id integer not null,
 	-- Kills, deaths and assists of the player
@@ -62,18 +77,7 @@ create table game(
 	gold integer not null,
 	-- Number of minions killed by the player
 	minions_killed integer not null,
-	-- Duration of the game, in seconds
-	duration integer not null,
-	-- Summoner IDs of other players in the game
-	losing_team integer[] not null,
-	winning_team integer[] not null
 );
-
--- Index for checking if a match is already in the database
-create index game_region_game_id_index on game (region, game_id);
-
--- Index for looking up Games played by a player
-create index game_summoner_id_index on game (summoner_id);
 
 drop table if exists aggregated_statistics cascade;
 
