@@ -39,13 +39,14 @@ class RegexTest {
 		return output;
 	}
 	
-	public static void httpTest() {
+	public static void runTest() {
 		try {
 			String region = "euw";
 			int summonerId = 19531813;
+			
 			System.out.println("Downloading data...");
 			long start = System.currentTimeMillis();
-			String content = httpDownload("http://www.lolking.net/summoner/" + region + "/" + 19531813);
+			String content = httpDownload("http://www.lolking.net/summoner/" + region + "/" + summonerId);
 			long duration = System.currentTimeMillis() - start;
 			System.out.println("Length: " + content.length());
 			System.out.println("Duration: " + duration + " ms");
