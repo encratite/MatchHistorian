@@ -65,18 +65,19 @@ create table game_player(
 	summoner_id integer references summoner(id),
 	-- Champion played by the player
 	champion_id integer not null,
+	-- The following fields may all be null because they are not available for any of the other players in a match
 	-- Kills, deaths and assists of the player
-	kills integer not null,
-	deaths integer not null,
-	assists integer not null,
+	kills integer,
+	deaths integer,
+	assists integer,
 	-- Array of IDs of items owned by the player
 	-- Null entries indicate an empty slot
 	-- Warning, size of array is ignored by the DBMS
-	items integer[6] not null,
+	items integer[6],
 	-- Gold earned by the player
-	gold integer not null,
+	gold integer,
 	-- Number of minions killed by the player
-	minions_killed integer not null,
+	minions_killed integer,
 );
 
 drop table if exists aggregated_statistics cascade;

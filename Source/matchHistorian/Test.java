@@ -42,7 +42,7 @@ class Test {
 			writer.write(content);
 			writer.close();
 			*/
-			Pattern pattern = Pattern.compile(
+			Pattern gamePattern = Pattern.compile(
 					"<div class=\\\"match_(win|loss)\\\" data-game-id=\\\"(\\d+)\\\">.+?" +
 					"url\\(\\/\\/lkimg\\.zamimg\\.com\\/shared\\/riot\\/images\\/champions\\/(\\d+)_92\\.png\\).+?" +
 					"<div style=\\\"font-size: 12px; font-weight: bold;\\\">(.+?)<\\/div>.+?" +
@@ -51,38 +51,65 @@ class Test {
 					"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Deaths<\\/span><br \\/>.+?" +
 					"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Assists<\\/span>.+?" +
 					"<strong>(\\d+)\\.(\\d)k</strong><div class=\\\"match_details_cell_label\\\">Gold</div>.+?" +
-					"<strong>(\\d+)</strong><div class=\\\"match_details_cell_label\\\">Minions<\\/div>",
+					"<strong>(\\d+)</strong><div class=\\\"match_details_cell_label\\\">Minions<\\/div>.+?" +
+					"url\\(\\/\\/lkimg\\.zamimg\\.com\\/images\\/spells\\/(\\d+)\\.png\\).+?" +
+					"url\\(\\/\\/lkimg\\.zamimg\\.com\\/images\\/spells\\/(\\d+)\\.png\\).+?" +
+					"<div style=\\\"width: 114px;\\\">(.+?)<button class=\\\"match_show_full_details_btn\\\">",
 					Pattern.DOTALL
 			);
-			Matcher matcher = pattern.matcher(content);
+			Pattern itemPattern = Pattern.compile(
+					"<div style=\\\"display: table-cell; padding: 2px; width: 34px; height: 34px;\\\">\\s+" +
+					"(<div class=\\\"icon_32\\\" style=\\\"background: url\\(\\/\\/lkimg\\.zamimg\\.com\\/shared\\/riot\\/images\\/items\\/\\d+_32\\.png\\);\\\"><a href=\\\"\\/items\\/(\\d+)\\\"><\\/a><\\/div>)?" +
+					"\\s+<\\/div>"
+				);
+			Matcher gameMatcher = gamePattern.matcher(content);
 			SimpleDateFormat inputDateFormat = new SimpleDateFormat("MM/dd/yy hh:mmaa zzz");
 			SimpleDateFormat outputDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 			outputDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 			int counter = 1;
-			while(matcher.find()) {
+			while(gameMatcher.find()) {
 				try {
-					String winLoss = matcher.group(1);
+					int group = 1;
+					String winLoss = gameMatcher.group(group++);
 					boolean win = winLoss.equals("win");
-					String gameIdString = matcher.group(2);
+					String gameIdString = gameMatcher.group(group++);
 					int gameId = Integer.parseInt(gameIdString);
-					String championIdString = matcher.group(3);
+					String championIdString = gameMatcher.group(group++);
 					int championId = Integer.parseInt(championIdString);
-					String mode = matcher.group(4);
-					String dateString = matcher.group(5);
+					String mode = gameMatcher.group(group++);
+					String dateString = gameMatcher.group(group++);
 					Date date = inputDateFormat.parse(dateString);
-					String killsString = matcher.group(6);
+					String killsString = gameMatcher.group(group++);
 					int kills = Integer.parseInt(killsString);
-					String deathsString = matcher.group(7);
+					String deathsString = gameMatcher.group(group++);
 					int deaths = Integer.parseInt(deathsString);
-					String assistsString = matcher.group(8);
+					String assistsString = gameMatcher.group(group++);
 					int assists = Integer.parseInt(assistsString);
-					String goldIntegerString = matcher.group(9);
+					String goldIntegerString = gameMatcher.group(group++);
 					int goldInteger = Integer.parseInt(goldIntegerString);
-					String goldFractionString = matcher.group(10);
+					String goldFractionString = gameMatcher.group(group++);
 					int goldFraction = Integer.parseInt(goldFractionString);
 					int gold = goldInteger * 1000 + goldFraction * 100;
-					String minionsString = matcher.group(11);
+					String minionsString = gameMatcher.group(group++);
 					int minions = Integer.parseInt(minionsString);
+					String summoner1String = gameMatcher.group(group++);
+					int summoner1 = Integer.parseInt(summoner1String);
+					String summoner2String = gameMatcher.group(group++);
+					int summoner2 = Integer.parseInt(summoner2String);
+					String itemsString = gameMatcher.group(group++);
+					Matcher itemMatcher = itemPattern.matcher(itemsString);
+					int[] items = new int[6];
+					for(int i = 0; i < items.length; i++) {
+						if(!itemMatcher.find())
+							throw new Exception("Invalid item count");
+						String itemString = itemMatcher.group(2);
+						int item;
+						if(itemString == null)
+							item = 0;
+						else
+							item = Integer.parseInt(itemString);
+						items[i] = item;
+					}
 					System.out.println("Game " + counter + ":");
 					System.out.println("Win: " + win);
 					System.out.println("Game ID: " + gameId);
@@ -92,6 +119,12 @@ class Test {
 					System.out.println("K/D/A: " + kills + "/" + deaths + "/" + assists);
 					System.out.println("Gold: " + gold);
 					System.out.println("Minions: " + minions);
+					System.out.println("Summoners: " + summoner1 + ", " + summoner2);
+					System.out.print("Items:");
+					for(int item : items) {
+						System.out.print(" " + item);
+					}
+					System.out.println("");
 				}
 				catch(NumberFormatException exception) {
 				}
