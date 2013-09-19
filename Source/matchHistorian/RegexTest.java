@@ -6,12 +6,13 @@ import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
-class Test {
+class RegexTest {
 	static String httpDownload(String urlString) throws Exception {
 		URL url = new URL(urlString);
 		HttpURLConnection connection = (HttpURLConnection)url.openConnection();
@@ -29,11 +30,22 @@ class Test {
 		return output;
 	}
 	
+	static ArrayList<GamePlayer> extractPlayers(String teamString) {
+		Pattern summonerPattern = Pattern.compile(
+			"<\\/div><\\/td><td style=\\\"color: #FFF;\\\">(<a href=\\\"\\/summoner\\/euw\\/(\\d+)\\\">(.+?)<\\/a>|.+?)<\\/td><\\/tr>.+?\\/(\\d+)_32\\.png",
+			Pattern.DOTALL
+		);
+		ArrayList<GamePlayer> output = new ArrayList<GamePlayer>();
+		return output;
+	}
+	
 	public static void httpTest() {
 		try {
+			String region = "euw";
+			int summonerId = 19531813;
 			System.out.println("Downloading data...");
 			long start = System.currentTimeMillis();
-			String content = httpDownload("http://www.lolking.net/summoner/euw/19531813");
+			String content = httpDownload("http://www.lolking.net/summoner/" + region + "/" + 19531813);
 			long duration = System.currentTimeMillis() - start;
 			System.out.println("Length: " + content.length());
 			System.out.println("Duration: " + duration + " ms");
@@ -43,25 +55,27 @@ class Test {
 			writer.close();
 			*/
 			Pattern gamePattern = Pattern.compile(
-					"<div class=\\\"match_(win|loss)\\\" data-game-id=\\\"(\\d+)\\\">.+?" +
-					"url\\(\\/\\/lkimg\\.zamimg\\.com\\/shared\\/riot\\/images\\/champions\\/(\\d+)_92\\.png\\).+?" +
-					"<div style=\\\"font-size: 12px; font-weight: bold;\\\">(.+?)<\\/div>.+?" +
-					"data-hoverswitch=\\\"(\\d+\\/\\d+\\/\\d+ \\d+:\\d+(?:AM|PM) .+?)\\\">.+?" +
-					"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Kills<\\/span><br \\/>.+?" +
-					"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Deaths<\\/span><br \\/>.+?" +
-					"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Assists<\\/span>.+?" +
-					"<strong>(\\d+)\\.(\\d)k</strong><div class=\\\"match_details_cell_label\\\">Gold</div>.+?" +
-					"<strong>(\\d+)</strong><div class=\\\"match_details_cell_label\\\">Minions<\\/div>.+?" +
-					"url\\(\\/\\/lkimg\\.zamimg\\.com\\/images\\/spells\\/(\\d+)\\.png\\).+?" +
-					"url\\(\\/\\/lkimg\\.zamimg\\.com\\/images\\/spells\\/(\\d+)\\.png\\).+?" +
-					"<div style=\\\"width: 114px;\\\">(.+?)<button class=\\\"match_show_full_details_btn\\\">",
-					Pattern.DOTALL
+				"<div class=\\\"match_(win|loss)\\\" data-game-id=\\\"(\\d+)\\\">.+?" +
+				"url\\(\\/\\/lkimg\\.zamimg\\.com\\/shared\\/riot\\/images\\/champions\\/(\\d+)_92\\.png\\).+?" +
+				"<div style=\\\"font-size: 12px; font-weight: bold;\\\">(.+?)<\\/div>.+?" +
+				"data-hoverswitch=\\\"(\\d+\\/\\d+\\/\\d+ \\d+:\\d+(?:AM|PM) .+?)\\\">.+?" +
+				"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Kills<\\/span><br \\/>.+?" +
+				"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Deaths<\\/span><br \\/>.+?" +
+				"<strong>(\\d+)</strong> <span style=\\\"color: #BBBBBB; font-size: 10px; line-height: 6px;\\\">Assists<\\/span>.+?" +
+				"<strong>(\\d+)\\.(\\d)k</strong><div class=\\\"match_details_cell_label\\\">Gold</div>.+?" +
+				"<strong>(\\d+)</strong><div class=\\\"match_details_cell_label\\\">Minions<\\/div>.+?" +
+				"url\\(\\/\\/lkimg\\.zamimg\\.com\\/images\\/spells\\/(\\d+)\\.png\\).+?" +
+				"url\\(\\/\\/lkimg\\.zamimg\\.com\\/images\\/spells\\/(\\d+)\\.png\\).+?" +
+				"<div style=\\\"width: 114px;\\\">(.+?)<button class=\\\"match_show_full_details_btn\\\">.+?" +
+				"<div style=\\\"overflow: hidden; width: 60%; float: left;\\\">.+?(Winning|Losing)(.+?)<\\/tbody>.+?" +
+				"<tbody>.+?(Winning|Losing)(.+?)<\\/tbody>",
+				Pattern.DOTALL
 			);
 			Pattern itemPattern = Pattern.compile(
-					"<div style=\\\"display: table-cell; padding: 2px; width: 34px; height: 34px;\\\">\\s+" +
-					"(<div class=\\\"icon_32\\\" style=\\\"background: url\\(\\/\\/lkimg\\.zamimg\\.com\\/shared\\/riot\\/images\\/items\\/\\d+_32\\.png\\);\\\"><a href=\\\"\\/items\\/(\\d+)\\\"><\\/a><\\/div>)?" +
-					"\\s+<\\/div>"
-				);
+				"<div style=\\\"display: table-cell; padding: 2px; width: 34px; height: 34px;\\\">\\s+" +
+				"(<div class=\\\"icon_32\\\" style=\\\"background: url\\(\\/\\/lkimg\\.zamimg\\.com\\/shared\\/riot\\/images\\/items\\/\\d+_32\\.png\\);\\\"><a href=\\\"\\/items\\/(\\d+)\\\"><\\/a><\\/div>)?" +
+				"\\s+<\\/div>"
+			);
 			Matcher gameMatcher = gamePattern.matcher(content);
 			SimpleDateFormat inputDateFormat = new SimpleDateFormat("MM/dd/yy hh:mmaa zzz");
 			SimpleDateFormat outputDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -110,6 +124,14 @@ class Test {
 							item = Integer.parseInt(itemString);
 						items[i] = item;
 					}
+					String outcomeString1 = gameMatcher.group(group++);
+					String teamString1 = gameMatcher.group(group++);
+					String outcomeString2 = gameMatcher.group(group++);
+					String teamString2 = gameMatcher.group(group++);
+					
+					System.out.println("outcomeString1 " + outcomeString1);
+					System.out.println("outcomeString2 " + outcomeString2);
+					
 					System.out.println("Game " + counter + ":");
 					System.out.println("Win: " + win);
 					System.out.println("Game ID: " + gameId);
