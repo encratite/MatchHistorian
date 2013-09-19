@@ -1,13 +1,13 @@
 package matchHistorian;
 
 class GamePlayer {
-	public final String name;
-	public final int id;
+	public final String summonerName;
+	public final int summonerId;
 	public final int championId;
 	
-	public GamePlayer(String name, int id, int championId) {
-		this.name = name;
-		this.id = id;
+	public GamePlayer(String summonerName, int summonerId, int championId) {
+		this.summonerName = summonerName;
+		this.summonerId = summonerId;
 		this.championId = championId;
 	}
 }
