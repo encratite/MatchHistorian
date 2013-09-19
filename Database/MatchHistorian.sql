@@ -26,7 +26,9 @@ create table summoner(
 	-- Numeric ID of the summoner in that region
 	summoner_id integer not null,
 	-- Last known name of that summoner
-	name text not null
+	name text not null,
+	-- If true, the match history of this summoner will be checked regularly for updates
+	update_automatically boolean not null
 );
 
 -- Index for looking up summoners based summoner IDs in requests by users and also to resolve other players within a game
