@@ -6,7 +6,7 @@ import java.util.Properties;
 class PostgreSQLTest {
 	public static void runTest() {
 		try {
-			String url = "jdbc:postgresql://localhost/match_historian";
+			final String url = "jdbc:postgresql://localhost/match_historian";
 			Properties properties = new Properties();
 			properties.setProperty("user", "void");
 			Connection connection = DriverManager.getConnection(url, properties);
