@@ -8,9 +8,9 @@ create type map_type as enum (
 	'howling_abyss'
 );
 
-drop type if exists game_type_type cascade;
+drop type if exists game_mode_type cascade;
 
-create type game_type_type as enum (
+create type game_mode_type as enum (
 	'normal',
 	'ranked_solo',
 	'ranked_team',
@@ -45,7 +45,7 @@ create table game(
 	-- The map the game was played on
 	map map_type not null,
 	-- Queue type or custom game mode indicator
-	game_type game_type_type not null,
+	game_mode game_mode_type not null,
 	-- The time the game finished, as UTC
 	time timestamp not null,
 	-- Duration of the game, in seconds
@@ -68,6 +68,8 @@ create table game_player(
 	-- Champion played by the player
 	champion_id integer not null,
 	-- The following fields may all be null because they are not available for any of the other players in a match
+	-- Summoner spells
+	spells integer[2],
 	-- Kills, deaths and assists of the player
 	kills integer,
 	deaths integer,
@@ -92,7 +94,7 @@ create table aggregated_statistics(
 	-- The map the games were played on
 	map map_type not null,
 	-- Queue type or custom game mode indicator for the games
-	game_type game_type_type not null,
+	game_mode game_mode_type not null,
 	-- Champion played by the player
 	champion_id integer not null,
 	-- Number of wins and losses with this configuration

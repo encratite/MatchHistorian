@@ -13,10 +13,12 @@ import org.java_websocket.framing.Framedata;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
-public class TestServer extends WebSocketServer {
-
-	public TestServer(int port) throws UnknownHostException {
+public class MatchHistorianServer extends WebSocketServer {
+	MatchHistorian historian;
+	
+	public MatchHistorianServer(MatchHistorian historian, int port) throws UnknownHostException {
 		super(new InetSocketAddress(port));
+		this.historian = historian;
 	}
 	
 	void print(WebSocket socket, String message) {
@@ -36,18 +38,6 @@ public class TestServer extends WebSocketServer {
 	@Override
 	public void onMessage(WebSocket socket, String message) {
 		print(socket, "Message: " + message);
-	}
-
-	public static void runTest() {
-		try {
-			final int port = 1031;
-			TestServer server = new TestServer(port);
-			server.start();
-			System.out.println("Running server on port " + port);
-		}
-		catch(Exception exception) {
-			exception.printStackTrace();
-		}
 	}
 	
 	@Override
