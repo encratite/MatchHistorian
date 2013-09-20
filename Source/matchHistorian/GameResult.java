@@ -6,6 +6,7 @@ import java.util.Date;
 enum Map {
 	TWISTED_TREELINE,
 	SUMMONERS_RIFT,
+	THE_CRYSTAL_SCAR,
 	HOWLING_ABYSS,
 }
 

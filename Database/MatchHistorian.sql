@@ -29,7 +29,8 @@ create table summoner(
 	-- Last known name of that summoner
 	name text not null,
 	-- If true, the match history of this summoner will be checked regularly for updates
-	update_automatically boolean not null
+	update_automatically boolean not null,
+	unique(region, summoner_id)
 );
 
 -- Index for looking up summoners based summoner IDs in requests by users and also to resolve other players within a game
@@ -85,7 +86,8 @@ create table game_player(
 	-- Gold earned by the player
 	gold integer,
 	-- Number of minions killed by the player
-	minions_killed integer
+	minions_killed integer,
+	unique(game_id, summoner_id)
 );
 
 drop table if exists aggregated_statistics cascade;
@@ -113,7 +115,8 @@ create table aggregated_statistics(
 	-- Total number of minions killed by the player in these games
 	minions_killed integer not null,
 	-- Total duration of all games for this configuration, in seconds
-	duration integer not null
+	duration integer not null,
+	unique(summoner_id, map, game_mode, champion_id)
 );
 
 -- Index for looking up records of a player for a certain mode
