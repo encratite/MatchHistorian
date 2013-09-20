@@ -5,6 +5,7 @@ drop type if exists map_type cascade;
 create type map_type as enum (
 	'twisted_treeline',
 	'summoners_rift',
+	'the_crystal_scar',
 	'howling_abyss'
 );
 
@@ -52,11 +53,14 @@ create table game(
 	duration integer not null,
 	-- Summoner IDs of other players in the game
 	losing_team integer[] not null,
-	winning_team integer[] not null
+	winning_team integer[] not null,
+	unique(region, game_id)
 );
 
 -- Index for checking if a match is already in the database
 create index game_region_game_id_index on game (region, game_id);
+
+drop table if exists game_player cascade;
 
 -- Information about a  particular player that participated in a game
 create table game_player(
@@ -81,7 +85,7 @@ create table game_player(
 	-- Gold earned by the player
 	gold integer,
 	-- Number of minions killed by the player
-	minions_killed integer,
+	minions_killed integer
 );
 
 drop table if exists aggregated_statistics cascade;
@@ -113,4 +117,4 @@ create table aggregated_statistics(
 );
 
 -- Index for looking up records of a player for a certain mode
-create index aggregated_statistics_lookup_index on aggregated_statistics (map, game_type, summoner_id);
+create index aggregated_statistics_lookup_index on aggregated_statistics (map, game_mode, summoner_id);
