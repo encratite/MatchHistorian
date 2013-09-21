@@ -15,7 +15,8 @@ create type game_mode_type as enum (
 	'normal',
 	'ranked_solo',
 	'ranked_team',
-	'custom'
+	'custom',
+	'coop_vs_ai'
 );
 
 drop table if exists summoner cascade;

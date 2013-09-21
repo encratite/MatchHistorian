@@ -17,29 +17,37 @@ public class Parser {
 	static Pattern integerPattern = Pattern.compile("\\d+");
 	static Pattern championIdPattern = Pattern.compile("(\\d+)_\\d+\\.png");
 	
+	public static String getName(Document document) throws Exception {
+		Element nameElement = document.getElementsByAttributeValue("style", "font-size: 36px; line-height: 44px; white-space: nowrap;").first();
+		if(nameElement == null)
+			throw new Exception("Unable to extract name");
+		return nameElement.text();
+	}
+	
 	public static ArrayList<GameResult> parseGames(Document document, int summonerId) throws Exception {
-		final String dateGameId = "data-game-id";
-		Elements gameElements = document.getElementsByAttribute(dateGameId);
+		final String dataGameId = "data-game-id";
+		Elements gameElements = document.getElementsByAttribute(dataGameId);
 		SimpleDateFormat inputDateFormat = new SimpleDateFormat("MM/dd/yy hh:mmaa zzz");
 		SimpleDateFormat outputDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 		outputDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 		ArrayList<GameResult> output = new ArrayList<GameResult>();
 		for (Element gameElement : gameElements) {
-			GameResult result = new GameResult();
-			result.gameId = Integer.parseInt(gameElement.attr(dateGameId));
-			result.victory = gameElement.className().equals("match_win");
+			GameResult game = new GameResult();
+			game.gameId = Integer.parseInt(gameElement.attr(dataGameId));
+			game.victory = gameElement.className().equals("match_win");
 			Element icon = gameElement.getElementsByClass("summoner_icon_64").first();
 			String style = icon.attr("style");
 			Matcher championIdMatcher = championIdPattern.matcher(style);
 			if(!championIdMatcher.find())
 				throw new Exception("Unable to extract champion ID");
-			result.championId = Integer.parseInt(championIdMatcher.group(1));
+			game.championId = Integer.parseInt(championIdMatcher.group(1));
 			Element gameModeElement = gameElement.getElementsByAttributeValueContaining("style", "font-weight: bold").first();
 			String gameMode = gameModeElement.text();
+			setMapAndMode(gameMode, game);
 			final String dataHoverSwitch = "data-hoverswitch";
 			Element dateElement = gameElement.getElementsByAttribute(dataHoverSwitch).first();
 			String dateString = dateElement.attr(dataHoverSwitch);
-			result.date = inputDateFormat.parse(dateString);
+			game.date = inputDateFormat.parse(dateString);
 			final String matchDetailCell = "match_details_cell";
 			Elements detailCells = gameElement.getElementsByClass(matchDetailCell);
 			Element durationCell = detailCells.get(2);
@@ -47,26 +55,26 @@ public class Parser {
 			Matcher durationMatcher = integerPattern.matcher(durationString);
 			if(!durationMatcher.find())
 				throw new Exception("Unable to extract duration");
-			result.duration = Integer.parseInt(durationMatcher.group()) * 60;
+			game.duration = Integer.parseInt(durationMatcher.group()) * 60;
 			Elements kdaElements = detailCells.get(3).getElementsByTag("strong");
-			result.kills = Integer.parseInt(kdaElements.get(0).text());
-			result.deaths = Integer.parseInt(kdaElements.get(1).text());
-			result.assists = Integer.parseInt(kdaElements.get(2).text());
+			game.kills = Integer.parseInt(kdaElements.get(0).text());
+			game.deaths = Integer.parseInt(kdaElements.get(1).text());
+			game.assists = Integer.parseInt(kdaElements.get(2).text());
 			String goldString = detailCells.get(4).getElementsByTag("strong").first().text();
-			result.gold = (int)(Float.parseFloat(goldString.substring(0, goldString.length() - 1)) * 1000);
-			result.minionsKilled = Integer.parseInt(detailCells.get(5).getElementsByTag("strong").first().text());
+			game.gold = (int)(Float.parseFloat(goldString.substring(0, goldString.length() - 1)) * 1000);
+			game.minionsKilled = Integer.parseInt(detailCells.get(5).getElementsByTag("strong").first().text());
 			Elements spellsElements = detailCells.get(6).getElementsByClass("icon_36");
-			result.spells = new int[2];
-			for(int i = 0; i < result.spells.length; i++) {
+			game.spells = new int[2];
+			for(int i = 0; i < game.spells.length; i++) {
 				String spellStyle = spellsElements.get(i).attr("style");
 				Matcher spellMatcher = integerPattern.matcher(spellStyle);
 				if(!spellMatcher.find())
 					throw new Exception("Unable to extract summoner spells");
-				result.spells[i] = Integer.parseInt(spellMatcher.group());
+				game.spells[i] = Integer.parseInt(spellMatcher.group());
 			}
 			Elements itemElements = detailCells.get(7).getElementsByAttributeValue("style", "display: table-cell; padding: 2px; width: 34px; height: 34px;");
-			result.items = new int[6];
-			for(int i = 0; i < result.items.length; i++) {
+			game.items = new int[6];
+			for(int i = 0; i < game.items.length; i++) {
 				Elements links = itemElements.get(i).getElementsByTag("a");
 				int item = 0;
 				if(links.size() != 0) {
@@ -75,15 +83,15 @@ public class Parser {
 						throw new Exception("Unable to extract item ID");
 					item = Integer.parseInt(itemMatcher.group());
 				}
-				result.items[i] = item;
+				game.items[i] = item;
 			}
 			Element extendedDetails = gameElement.getElementsByClass("match_details_extended").first();
 			Elements teams = extendedDetails.getElementsByTag("tbody");
 			Element losingTeamBody = gameElement.getElementsContainingOwnText("Losing Team").first().parent().parent().parent();
 			Element winningTeamBody = gameElement.getElementsContainingOwnText("Winning Team").first().parent().parent().parent();
-			result.losingTeam = parseTeam(losingTeamBody, summonerId);
-			result.winningTeam = parseTeam(winningTeamBody, summonerId);
-			output.add(result);
+			game.losingTeam = parseTeam(losingTeamBody, summonerId);
+			game.winningTeam = parseTeam(winningTeamBody, summonerId);
+			output.add(game);
 		}
 		return output;
 	}
@@ -118,5 +126,55 @@ public class Parser {
 			output.add(player);
 		}
 		return output;
+	}
+	
+	static void setMapAndMode(String description, GameResult result) throws Exception {
+		if(description.equals("Custom")) {
+			result.mapUnknown = true;
+			result.mode = GameMode.CUSTOM;
+		}
+		else if(description.equals("Normal 3v3")) {
+			result.map = Map.TWISTED_TREELINE;
+			result.mode = GameMode.NORMAL;
+		}
+		else if(description.equals("Normal 5v5")) {
+			result.map = Map.SUMMONERS_RIFT;
+			result.mode = GameMode.NORMAL;
+		}
+		else if(description.equals("Dominion")) {
+			result.map = Map.THE_CRYSTAL_SCAR;
+			result.mode = GameMode.NORMAL;
+		}
+		else if(description.equals("Howling Abyss")) {
+			result.map = Map.HOWLING_ABYSS;
+			result.mode = GameMode.NORMAL;
+		}
+		else if(description.equals("Ranked Team 3v3")) {
+			result.map = Map.TWISTED_TREELINE;
+			result.mode = GameMode.RANKED_TEAM;
+		}
+		else if(description.equals("Ranked Solo 5v5")) {
+			result.map = Map.SUMMONERS_RIFT;
+			result.mode = GameMode.RANKED_SOLO;
+		}
+		else if(description.equals("Ranked Team 5v5")) {
+			result.map = Map.SUMMONERS_RIFT;
+			result.mode = GameMode.RANKED_TEAM;
+		}
+		else if(description.equals("Co-Op Vs AI 3v3")) {
+			result.map = Map.TWISTED_TREELINE;
+			result.mode = GameMode.COOP_VS_AI;
+		}
+		else if(description.equals("Co-Op Vs AI 5v5")) {
+			result.map = Map.SUMMONERS_RIFT;
+			result.mode = GameMode.COOP_VS_AI;
+		}
+		else if(description.equals("Co-Op Vs AI Dominion")) {
+			result.map = Map.THE_CRYSTAL_SCAR;
+			result.mode = GameMode.COOP_VS_AI;
+		}
+		else {
+			throw new Exception("Unknown map/mode description: " + description);
+		}
 	}
 }
