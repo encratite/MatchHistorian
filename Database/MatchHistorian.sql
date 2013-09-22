@@ -31,6 +31,7 @@ create table summoner(
 	name text not null,
 	-- If true, the match history of this summoner will be checked regularly for updates
 	update_automatically boolean not null,
+
 	unique(region, summoner_id)
 );
 
@@ -46,7 +47,7 @@ create table game(
 	-- ID of the game on the server
 	game_id integer not null,
 	-- The map the game was played on
-	map map_type not null,
+	map map_type,
 	-- Queue type or custom game mode indicator
 	game_mode game_mode_type not null,
 	-- The time the game finished, as UTC
@@ -56,6 +57,7 @@ create table game(
 	-- Summoner IDs of other players in the game
 	losing_team integer[] not null,
 	winning_team integer[] not null,
+
 	unique(region, game_id)
 );
 
@@ -88,8 +90,12 @@ create table game_player(
 	gold integer,
 	-- Number of minions killed by the player
 	minions_killed integer,
+
 	unique(game_id, summoner_id)
 );
+
+-- Index for looking up the record of a player that participated in a game
+create index game_player_lookup_index on game_player (game_id, summoner_id);
 
 drop table if exists aggregated_statistics cascade;
 
@@ -117,6 +123,7 @@ create table aggregated_statistics(
 	minions_killed integer not null,
 	-- Total duration of all games for this configuration, in seconds
 	duration integer not null,
+	
 	unique(summoner_id, map, game_mode, champion_id)
 );
 

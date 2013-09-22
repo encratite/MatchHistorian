@@ -101,19 +101,37 @@ public class MatchHistorian {
 		return 1;
 	}
 	
+	static int getInsertId(PreparedStatement statement) throws Exception {
+		ResultSet keys = statement.getGeneratedKeys();
+		if(!keys.first())
+			throw new Exception("Unable to retrieve generated keys");
+		return keys.getInt(1);
+	}
+	
 	void processGameResult(String region, GameResult game) throws Exception {
 		// Check if the game is in the database yet
-		String query = "select count(*) from game where region = ? and game_id = ?";
+		String query = "select id from game where region = ? and game_id = ?";
 		PreparedStatement statement = this.database.prepareStatement(query);
 		int index = getIndex();
 		statement.setString(index++, region);
 		statement.setInt(index++, game.gameId);
 		ResultSet result = statement.executeQuery();
-		result.first();
-		int count = result.getInt(getIndex());
-		result.close();
-		statement.close();
-		if(count == 0) {
+		int gameId;
+		boolean gameInDatabase = result.first();
+		if(gameInDatabase) {
+			gameId = result.getInt(getIndex());
+			result.close();
+			statement.close();
+			// The game was already in the database so we have to make sure that these entries for the player are set
+			query = "update game_player set spells = ?, kills = ?, deaths = ?, items = ?, gold = ?, minions_killed = ? where game_id = ? and summoner_id = ?";
+			statement = this.database.prepareStatement(query);
+			index = getIndex();
+			statement.executeUpdate();
+			statement.close();
+		}
+		else {
+			result.close();
+			statement.close();
 			// The game wasn't in the database yet, add it
 			query = "insert into table game (region, game_id, map, game_mode, time, duration, losing_team, winning_team) values (?, ?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?)";
 			statement = this.database.prepareStatement(query);
@@ -130,6 +148,7 @@ public class MatchHistorian {
 			statement.setArray(index++, GameResult.getTeamIds(this.database, game.losingTeam));
 			statement.setArray(index++, GameResult.getTeamIds(this.database, game.winningTeam));
 			statement.executeUpdate();
+			gameId = getInsertId(statement);
 			statement.close();
 		}
 		throw new Exception("Not implemented");
