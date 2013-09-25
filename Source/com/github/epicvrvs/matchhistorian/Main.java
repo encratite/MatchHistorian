@@ -1,4 +1,4 @@
-package matchHistorian;
+package com.github.epicvrvs.matchhistorian;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;

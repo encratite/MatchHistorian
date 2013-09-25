@@ -1,4 +1,4 @@
-package matchHistorian;
+package com.github.epicvrvs.matchhistorian;
 
 import java.io.FileInputStream;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package matchHistorian;
+package com.github.epicvrvs.matchhistorian;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;

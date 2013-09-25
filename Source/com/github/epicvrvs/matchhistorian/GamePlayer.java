@@ -1,4 +1,4 @@
-package matchHistorian;
+package com.github.epicvrvs.matchhistorian;
 
 class GamePlayer {
 	public final String summonerName;
