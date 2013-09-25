@@ -8,7 +8,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -49,40 +48,28 @@ public class MatchHistorian {
 			// Check if the summoner needs to be added to the database
 			// Start a new transaction
 			this.database.setAutoCommit(false);
-			String query = "select count(*) from summoner where region = ? and summoner_id = ?";
-			PreparedStatement statement = this.database.prepareStatement(query);
-			int index = getIndex();
-			statement.setString(index++, region);
-			statement.setInt(index++, summonerId);
-			ResultSet result = statement.executeQuery();
+			Statement statement = getStatement("select count(*) from summoner where region = ? and summoner_id = ?");
+			statement.setString(region);
+			statement.setInteger(summonerId);
+			ResultSet result = statement.query();
 			result.first();
 			int count = result.getInt(1);
-			result.close();
+			statement.close();
 			if(count != 1) {
-				// Necessary due to resource leak detection bug
-				statement.close();
 				// The summoner is not in the database yet
-				query = "insert into summoner (region, summoner_id, name, update_automatically) values (?, ?, ?, true)";
-				statement = this.database.prepareStatement(query);
-				index = getIndex();
-				statement.setString(index++, region);
-				statement.setInt(index++, summonerId);
-				statement.setString(index++, profile.name);
-				statement.executeUpdate();
-				statement.close();
+				statement = getStatement("insert into summoner (region, summoner_id, name, update_automatically) values (?, ?, ?, true)");
+				statement.setString(region);
+				statement.setInteger(summonerId);
+				statement.setString(profile.name);
+				statement.updateAndClose();
 			}
 			else {
-				// Necessary due to resource leak detection bug
-				statement.close();
 				// The summoner was already stored in the database
 				// Still need to make sure that automatic updates are enabled
-				query = "update table summoner set automatic_updates = true where region = ? and summoner_id = ?";
-				statement = this.database.prepareStatement(query);
-				index = getIndex();
-				statement.setString(index++, region);
-				statement.setInt(index++, summonerId);
-				statement.executeUpdate();
-				statement.close();
+				statement = getStatement("update table summoner set automatic_updates = true where region = ? and summoner_id = ?");
+				statement.setString(region);
+				statement.setInteger(summonerId);
+				statement.updateAndClose();
 			}
 			for(GameResult game : profile.games) {
 				processGameResult(region, game);
@@ -97,60 +84,47 @@ public class MatchHistorian {
 		return true;
 	}
 	
-	static int getIndex() {
-		return 1;
-	}
-	
-	static int getInsertId(PreparedStatement statement) throws Exception {
-		ResultSet keys = statement.getGeneratedKeys();
-		if(!keys.first())
-			throw new Exception("Unable to retrieve generated keys");
-		return keys.getInt(1);
+	Statement getStatement(String query) throws SQLException {
+		return new Statement(this.database, query);
 	}
 	
 	void processGameResult(String region, GameResult game) throws Exception {
 		// Check if the game is in the database yet
-		String query = "select id from game where region = ? and game_id = ?";
-		PreparedStatement statement = this.database.prepareStatement(query);
-		int index = getIndex();
-		statement.setString(index++, region);
-		statement.setInt(index++, game.gameId);
-		ResultSet result = statement.executeQuery();
+		Statement statement = getStatement("select id from game where region = ? and game_id = ?");
+		statement.setString(region);
+		statement.setInteger(game.gameId);
+		ResultSet result = statement.query();
 		int gameId;
 		boolean gameInDatabase = result.first();
 		if(gameInDatabase) {
-			gameId = result.getInt(getIndex());
+			gameId = result.getInt(1);
 			result.close();
 			statement.close();
 			// The game was already in the database so we have to make sure that these entries for the player are set
-			query = "update game_player set spells = ?, kills = ?, deaths = ?, items = ?, gold = ?, minions_killed = ? where game_id = ? and summoner_id = ?";
-			statement = this.database.prepareStatement(query);
-			index = getIndex();
-			statement.executeUpdate();
-			statement.close();
+			statement = getStatement("update game_player set spells = ?, kills = ?, deaths = ?, items = ?, gold = ?, minions_killed = ? where game_id = ? and summoner_id = ?");
+			statement.updateAndClose();
 		}
 		else {
 			result.close();
 			statement.close();
 			// The game wasn't in the database yet, add it
-			query = "insert into table game (region, game_id, map, game_mode, time, duration, losing_team, winning_team) values (?, ?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?)";
-			statement = this.database.prepareStatement(query);
-			index = getIndex();
-			statement.setString(index++, region);
-			statement.setInt(index++, game.gameId);
+			statement = getStatement("insert into table game (region, game_id, map, game_mode, time, duration, losing_team, winning_team) values (?, ?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?)");
+			statement.setString(region);
+			statement.setInteger(game.gameId);
 			if(game.mapUnknown)
-				statement.setNull(index++, Types.VARCHAR);
+				statement.setNull(Types.VARCHAR);
 			else
-				statement.setString(index++, GameResult.getMapString(game.map));
-			statement.setString(index++, GameResult.getGameModeString(game.mode));
-			statement.setDate(index++, new java.sql.Date(game.date.getTime()));
-			statement.setInt(index++, game.duration);
-			statement.setArray(index++, GameResult.getTeamIds(this.database, game.losingTeam));
-			statement.setArray(index++, GameResult.getTeamIds(this.database, game.winningTeam));
-			statement.executeUpdate();
-			gameId = getInsertId(statement);
+				statement.setString(GameResult.getMapString(game.map));
+			statement.setString(GameResult.getGameModeString(game.mode));
+			statement.setDate(new java.sql.Date(game.date.getTime()));
+			statement.setInteger(game.duration);
+			statement.setArray(GameResult.getTeamIds(database, game.losingTeam));
+			statement.setArray(GameResult.getTeamIds(database, game.winningTeam));
+			statement.update();
+			gameId = statement.getInsertId();
 			statement.close();
 		}
+		statement = getStatement("select id from aggregated_statistics where summoner_id = ? and map = ?::map_type and game_mode = ?::game_mode_type and champion_id = ?");
 		throw new Exception("Not implemented");
 	}
 	
