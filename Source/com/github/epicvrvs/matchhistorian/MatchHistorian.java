@@ -48,31 +48,33 @@ public class MatchHistorian {
 			// Check if the summoner needs to be added to the database
 			// Start a new transaction
 			this.database.setAutoCommit(false);
-			Statement statement = getStatement("select count(*) from summoner where region = ? and summoner_id = ?");
+			Statement statement = getStatement("select id from summoner where region = ? and summoner_id = ?");
 			statement.setString(region);
 			statement.setInteger(summonerId);
 			ResultSet result = statement.query();
-			result.first();
-			int count = result.getInt(1);
-			statement.close();
-			if(count != 1) {
+			int id;
+			if(result.first()) {
 				// The summoner is not in the database yet
+				statement.close();
 				statement = getStatement("insert into summoner (region, summoner_id, name, update_automatically) values (?, ?, ?, true)");
 				statement.setString(region);
 				statement.setInteger(summonerId);
 				statement.setString(profile.name);
-				statement.updateAndClose();
+				statement.update();
+				id = statement.getInsertId();
+				statement.close();
 			}
 			else {
 				// The summoner was already stored in the database
 				// Still need to make sure that automatic updates are enabled
+				id = result.getInt(1);
 				statement = getStatement("update table summoner set automatic_updates = true where region = ? and summoner_id = ?");
 				statement.setString(region);
 				statement.setInteger(summonerId);
 				statement.updateAndClose();
 			}
 			for(GameResult game : profile.games) {
-				processGameResult(region, game);
+				processGameResult(region, id, game);
 			}
 			// End of transaction
 			this.database.commit();
@@ -88,7 +90,18 @@ public class MatchHistorian {
 		return new Statement(this.database, query);
 	}
 	
-	void processGameResult(String region, GameResult game) throws Exception {
+	void setAggregatedStatsVariables(Statement statement, GameResult game) throws SQLException {
+		statement.setInteger(game.victory ? 1 : 0);
+		statement.setInteger(game.victory ? 0 : 1);
+		statement.setInteger(game.kills);
+		statement.setInteger(game.deaths);
+		statement.setInteger(game.assists);
+		statement.setInteger(game.gold);
+		statement.setInteger(game.minionsKilled);
+		statement.setInteger(game.duration);
+	}
+	
+	void processGameResult(String region, int id, GameResult game) throws Exception {
 		// Check if the game is in the database yet
 		Statement statement = getStatement("select id from game where region = ? and game_id = ?");
 		statement.setString(region);
@@ -125,7 +138,31 @@ public class MatchHistorian {
 			statement.close();
 		}
 		statement = getStatement("select id from aggregated_statistics where summoner_id = ? and map = ?::map_type and game_mode = ?::game_mode_type and champion_id = ?");
-		throw new Exception("Not implemented");
+		statement.setInteger(id);
+		statement.setString(GameResult.getMapString(game.map));
+		statement.setString(GameResult.getGameModeString(game.mode));
+		statement.setInteger(game.championId);
+		result = statement.query();
+		if(result.first()) {
+			// There is already an entry for that combination of summoner, map, game mode and champion
+			// Update the existing entry based on the ID
+			int aggregatedStatisticsId = result.getInt(1);
+			statement.close();
+			statement = getStatement("update aggregated_statistics set wins = wins + ?, losses = losses + ?, kills = kills + ?, deaths = deaths + ?, assists = assists + ?, gold = gold + ?, minions_killed = minions_killed + ?, duration = duration + ? where id = ?");
+			setAggregatedStatsVariables(statement, game);
+			statement.updateAndClose();
+		}
+		else {
+			// The entry didn't exist yet, create a new one first
+			statement.close();
+			statement = getStatement("insert into table aggregated_statistics (summoner_id, map, game_mode, champion_id, wins, losses, kills, deaths, assists, gold, minions_killed, duration) values (?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+			statement.setInteger(id);
+			statement.setString(GameResult.getMapString(game.map));
+			statement.setString(GameResult.getGameModeString(game.mode));
+			statement.setInteger(game.championId);
+			setAggregatedStatsVariables(statement, game);
+			statement.updateAndClose();
+		}
 	}
 	
 	SummonerProfile getProfile(String region, int summonerId) throws Exception {
