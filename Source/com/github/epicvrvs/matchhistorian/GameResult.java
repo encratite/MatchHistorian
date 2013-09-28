@@ -6,21 +6,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 
-enum Map {
-	TWISTED_TREELINE,
-	SUMMONERS_RIFT,
-	THE_CRYSTAL_SCAR,
-	HOWLING_ABYSS,
-}
-
-enum GameMode {
-	NORMAL,
-	RANKED_SOLO,
-	RANKED_TEAM,
-	CUSTOM,
-	COOP_VS_AI,
-}
-
 class GameResult {
 	public int gameId;
 	public int summonerId;
@@ -38,7 +23,7 @@ class GameResult {
 	public int minionsKilled;
 	public int[] spells;
 	public int[] items;
-	ArrayList<GamePlayer> losingTeam, winningTeam;
+	public ArrayList<GamePlayer> losingTeam, winningTeam;
 	
 	public static String getMapString(Map map) {
 		return map.toString().toLowerCase();

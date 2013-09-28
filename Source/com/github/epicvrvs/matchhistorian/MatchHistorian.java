@@ -32,7 +32,7 @@ public class MatchHistorian {
 	 * @param summonerId the numeric ID of the summoner on the game servers
 	 */
 	public void updateSummoner(String region, int summonerId) throws MatchHistorianException, ParserException, SQLException, HTTPException {
-		SummonerProfile profile = getProfile(region, summonerId);
+		SummonerWebData profile = getProfile(region, summonerId);
 		try(Transaction transaction = new Transaction(database)) {
 			// Check if the summoner needs to be added to the database
 			try(Statement select = getStatement("select id from summoner where region = ? and summoner_id = ?")) {
@@ -165,13 +165,13 @@ public class MatchHistorian {
 		}
 	}
 	
-	SummonerProfile getProfile(String region, int summonerId) throws HTTPException, MatchHistorianException, ParserException {
+	SummonerWebData getProfile(String region, int summonerId) throws HTTPException, MatchHistorianException, ParserException {
 		try {
 			String url = "http://www.lolking.net/summoner/" + region + "/" + summonerId;
 			Document document = Jsoup.connect(url).get();
 			String summonerName = Parser.getName(document);
 			ArrayList<GameResult> games = Parser.parseGames(document, summonerId);
-			SummonerProfile profile = new SummonerProfile(region, summonerName, summonerId, games);
+			SummonerWebData profile = new SummonerWebData(region, summonerName, summonerId, games);
 			return profile;
 		}
 		catch(HttpStatusException exception) {

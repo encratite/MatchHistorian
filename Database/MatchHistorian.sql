@@ -1,3 +1,5 @@
+-- PostgreSQL only
+
 set client_min_messages to warning;
 
 drop type if exists map_type cascade;
