@@ -101,7 +101,7 @@ public class MatchHistorian {
 		statement.setInteger(game.duration);
 	}
 	
-	void processGameResult(String region, int id, GameResult game) throws Exception {
+	void processGameResult(String region, int id, GameResult game) throws SQLException {
 		// Check if the game is in the database yet
 		Statement statement = getStatement("select id from game where region = ? and game_id = ?");
 		statement.setString(region);
@@ -165,7 +165,7 @@ public class MatchHistorian {
 		}
 	}
 	
-	SummonerProfile getProfile(String region, int summonerId) throws Exception {
+	SummonerProfile getProfile(String region, int summonerId) throws HTTPException, ParserException {
 		try {
 			String url = "http://www.lolking.net/summoner/" + region + "/" + summonerId;
 			Document document = Jsoup.connect(url).get();
@@ -180,7 +180,10 @@ public class MatchHistorian {
 				return null;
 			}
 			else
-				throw exception;
+				throw new HTTPException("HTTP status exception", exception);
+		}
+		catch(IOException exception) {
+			throw new HTTPException("IO exception", exception);
 		}
 	}
 }

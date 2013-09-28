@@ -1,5 +1,6 @@
 package com.github.epicvrvs.matchhistorian;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -17,14 +18,14 @@ public class Parser {
 	static Pattern integerPattern = Pattern.compile("\\d+");
 	static Pattern championIdPattern = Pattern.compile("(\\d+)_\\d+\\.png");
 	
-	public static String getName(Document document) throws Exception {
+	public static String getName(Document document) throws ParserException {
 		Element nameElement = document.getElementsByAttributeValue("style", "font-size: 36px; line-height: 44px; white-space: nowrap;").first();
 		if(nameElement == null)
-			throw new Exception("Unable to extract name");
+			throw new ParserException("Unable to extract summoner name");
 		return nameElement.text();
 	}
 	
-	public static ArrayList<GameResult> parseGames(Document document, int summonerId) throws Exception {
+	public static ArrayList<GameResult> parseGames(Document document, int summonerId) throws ParserException {
 		final String dataGameId = "data-game-id";
 		Elements gameElements = document.getElementsByAttribute(dataGameId);
 		SimpleDateFormat inputDateFormat = new SimpleDateFormat("MM/dd/yy hh:mmaa zzz");
@@ -39,7 +40,7 @@ public class Parser {
 			String style = icon.attr("style");
 			Matcher championIdMatcher = championIdPattern.matcher(style);
 			if(!championIdMatcher.find())
-				throw new Exception("Unable to extract champion ID");
+				throw new ParserException("Unable to extract champion ID");
 			game.championId = Integer.parseInt(championIdMatcher.group(1));
 			Element gameModeElement = gameElement.getElementsByAttributeValueContaining("style", "font-weight: bold").first();
 			String gameMode = gameModeElement.text();
@@ -47,14 +48,19 @@ public class Parser {
 			final String dataHoverSwitch = "data-hoverswitch";
 			Element dateElement = gameElement.getElementsByAttribute(dataHoverSwitch).first();
 			String dateString = dateElement.attr(dataHoverSwitch);
-			game.date = inputDateFormat.parse(dateString);
+			try {
+				game.date = inputDateFormat.parse(dateString);
+			}
+			catch(ParseException exception) {
+				throw new ParserException("Unable to parse date string", exception);
+			}
 			final String matchDetailCell = "match_details_cell";
 			Elements detailCells = gameElement.getElementsByClass(matchDetailCell);
 			Element durationCell = detailCells.get(2);
 			String durationString = durationCell.child(0).getElementsByTag("strong").first().text();
 			Matcher durationMatcher = integerPattern.matcher(durationString);
 			if(!durationMatcher.find())
-				throw new Exception("Unable to extract duration");
+				throw new ParserException("Unable to extract duration");
 			game.duration = Integer.parseInt(durationMatcher.group()) * 60;
 			Elements kdaElements = detailCells.get(3).getElementsByTag("strong");
 			game.kills = Integer.parseInt(kdaElements.get(0).text());
@@ -69,7 +75,7 @@ public class Parser {
 				String spellStyle = spellsElements.get(i).attr("style");
 				Matcher spellMatcher = integerPattern.matcher(spellStyle);
 				if(!spellMatcher.find())
-					throw new Exception("Unable to extract summoner spells");
+					throw new ParserException("Unable to extract summoner spells");
 				game.spells[i] = Integer.parseInt(spellMatcher.group());
 			}
 			Elements itemElements = detailCells.get(7).getElementsByAttributeValue("style", "display: table-cell; padding: 2px; width: 34px; height: 34px;");
@@ -80,7 +86,7 @@ public class Parser {
 				if(links.size() != 0) {
 					Matcher itemMatcher = integerPattern.matcher(links.get(0).attr("href"));
 					if(!itemMatcher.find())
-						throw new Exception("Unable to extract item ID");
+						throw new ParserException("Unable to extract item ID");
 					item = Integer.parseInt(itemMatcher.group());
 				}
 				game.items[i] = item;
@@ -96,7 +102,7 @@ public class Parser {
 		return output;
 	}
 	
-	static ArrayList<GamePlayer> parseTeam(Element teamBody, int defaultSummonerId) throws Exception {
+	static ArrayList<GamePlayer> parseTeam(Element teamBody, int defaultSummonerId) throws ParserException {
 		ArrayList<GamePlayer> output = new ArrayList<GamePlayer>();
 		Elements summonerElements = teamBody.getElementsByAttributeValue("style", "color: #FFF;");
 		Elements iconElements = teamBody.getElementsByAttributeValueContaining("style", "png");
@@ -115,12 +121,12 @@ public class Parser {
 				name = summonerLink.text();
 				Matcher idMatcher = integerPattern.matcher(summonerLink.attr("href"));
 				if(!idMatcher.find())
-					throw new Exception("Unable to extract summoner ID");
+					throw new ParserException("Unable to extract summoner ID");
 				summonerId = Integer.parseInt(idMatcher.group());
 			}
 			Matcher championIdMatcher = championIdPattern.matcher(iconElement.attr("style"));
 			if(!championIdMatcher.find())
-				throw new Exception("Unable to extract champion ID");
+				throw new ParserException("Unable to extract champion ID");
 			int championId = Integer.parseInt(championIdMatcher.group(1));
 			GamePlayer player = new GamePlayer(name, summonerId, championId);
 			output.add(player);
@@ -128,7 +134,7 @@ public class Parser {
 		return output;
 	}
 	
-	static void setMapAndMode(String description, GameResult result) throws Exception {
+	static void setMapAndMode(String description, GameResult result) throws ParserException {
 		if(description.equals("Custom")) {
 			result.mapUnknown = true;
 			result.mode = GameMode.CUSTOM;
@@ -174,7 +180,7 @@ public class Parser {
 			result.mode = GameMode.COOP_VS_AI;
 		}
 		else {
-			throw new Exception("Unknown map/mode description: " + description);
+			throw new ParserException("Unknown map/mode description: " + description);
 		}
 	}
 }

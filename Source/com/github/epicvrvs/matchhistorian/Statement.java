@@ -35,10 +35,10 @@ public class Statement {
 		statement.close();
 	}
 	
-	public int getInsertId() throws Exception {
+	public int getInsertId() throws SQLException {
 		ResultSet keys = statement.getGeneratedKeys();
 		if(!keys.first())
-			throw new Exception("Unable to retrieve generated keys");
+			throw new SQLException("Unable to retrieve generated keys");
 		return keys.getInt(1);
 	}
 	
