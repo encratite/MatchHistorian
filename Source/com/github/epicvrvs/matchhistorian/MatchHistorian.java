@@ -41,6 +41,14 @@ public class MatchHistorian {
 				ResultSet result = select.query();
 				int id;
 				if(result.first()) {
+					// The summoner was already stored in the database
+					// Still need to make sure that automatic updates are enabled
+					id = result.getInt("id");
+					try(Statement update = getAutomaticUpdateStatement(region, summonerId, true)) {
+						select.update();
+					}
+				}
+				else {
 					// The summoner is not in the database yet
 					try(Statement insert = getStatement("insert into summoner (region, summoner_id, name, update_automatically) values (?, ?, ?, true)")) {
 						insert.setString(region);
@@ -48,14 +56,6 @@ public class MatchHistorian {
 						insert.setString(profile.name);
 						insert.update();
 						id = insert.getInsertId();
-					}
-				}
-				else {
-					// The summoner was already stored in the database
-					// Still need to make sure that automatic updates are enabled
-					id = result.getInt(1);
-					try(Statement update = getAutomaticUpdateStatement(region, summonerId, true)) {
-						select.update();
 					}
 				}
 				for(GameResult game : profile.games) {
@@ -111,7 +111,7 @@ public class MatchHistorian {
 			int gameId;
 			boolean gameInDatabase = gameIdResult.first();
 			if(gameInDatabase) {
-				gameId = gameIdResult.getInt(1);
+				gameId = gameIdResult.getInt("id");
 				// The game was already in the database so we have to make sure that these entries for the player are set
 				try(Statement update = getStatement("update game_player set spells = ?, kills = ?, deaths = ?, items = ?, gold = ?, minions_killed = ? where game_id = ? and summoner_id = ?")) {
 					update.update();
@@ -144,7 +144,7 @@ public class MatchHistorian {
 				if(aggregatedIdResult.first()) {
 					// There is already an entry for that combination of summoner, map, game mode and champion
 					// Update the existing entry based on the ID
-					int aggregatedStatisticsId = aggregatedIdResult.getInt(1);
+					int aggregatedStatisticsId = aggregatedIdResult.getInt("id");
 					try(Statement updateAggregatedStatistics = getStatement("update aggregated_statistics set wins = wins + ?, losses = losses + ?, kills = kills + ?, deaths = deaths + ?, assists = assists + ?, gold = gold + ?, minions_killed = minions_killed + ?, duration = duration + ? where id = ?")) {
 						setAggregatedStatsVariables(updateAggregatedStatistics, game);
 						updateAggregatedStatistics.update();

@@ -17,17 +17,16 @@ public class AggregatedStatistics {
 	int duration;
 	
 	AggregatedStatistics(ResultSet result) throws SQLException {
-		int index = 1;
-		map = Map.valueOf(result.getString(index++).toUpperCase());
-		gameMode = GameMode.valueOf(result.getString(index++).toUpperCase());
-		championId = result.getInt(index++);
-		wins = result.getInt(index++);
-		losses = result.getInt(index++);
-		kills = result.getInt(index++);
-		deaths = result.getInt(index++);
-		assists = result.getInt(index++);
-		gold = result.getInt(index++);
-		minionsKilled = result.getInt(index++);
-		duration = result.getInt(index++);
+		map = Map.valueOf(result.getString("map").toUpperCase());
+		gameMode = GameMode.valueOf(result.getString("game_mode").toUpperCase());
+		championId = result.getInt("champion_id");
+		wins = result.getInt("wins");
+		losses = result.getInt("losses");
+		kills = result.getInt("kills");
+		deaths = result.getInt("deaths");
+		assists = result.getInt("assists");
+		gold = result.getInt("gold");
+		minionsKilled = result.getInt("minions_killed");
+		duration = result.getInt("duration");
 	}
 }
