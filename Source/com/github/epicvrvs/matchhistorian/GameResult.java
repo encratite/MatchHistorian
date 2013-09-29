@@ -11,7 +11,6 @@ class GameResult {
 	public int summonerId;
 	public boolean victory;
 	public int championId;
-	public boolean mapUnknown; 
 	public Map map;
 	public GameMode mode;
 	public Date date;
@@ -26,11 +25,17 @@ class GameResult {
 	public ArrayList<GamePlayer> losingTeam, winningTeam;
 	
 	public static String getMapString(Map map) {
-		return map.toString().toLowerCase();
+		if(map == null)
+			return null;
+		else
+			return map.toString().toLowerCase();
 	}
 	
 	public static String getGameModeString(GameMode mode) {
-		return mode.toString().toLowerCase();
+		if(mode == null)
+			return null;
+		else
+			return mode.toString().toLowerCase();
 	}
 	
 	public static Array getTeamIds(Connection database, ArrayList<GamePlayer> team) throws SQLException {

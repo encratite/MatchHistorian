@@ -122,10 +122,7 @@ public class MatchHistorian {
 				try(Statement insertGame = getStatement("insert into table game (region, game_id, map, game_mode, time, duration, losing_team, winning_team) values (?, ?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?)")) {
 					insertGame.setString(region);
 					insertGame.setInteger(game.gameId);
-					if(game.mapUnknown)
-						insertGame.setNull(Types.VARCHAR);
-					else
-						insertGame.setString(GameResult.getMapString(game.map));
+					insertGame.setString(GameResult.getMapString(game.map));
 					insertGame.setString(GameResult.getGameModeString(game.mode));
 					insertGame.setDate(new java.sql.Date(game.date.getTime()));
 					insertGame.setInteger(game.duration);

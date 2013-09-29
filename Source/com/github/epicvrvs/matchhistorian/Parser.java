@@ -136,7 +136,7 @@ public class Parser {
 	
 	static void setMapAndMode(String description, GameResult result) throws ParserException {
 		if(description.equals("Custom")) {
-			result.mapUnknown = true;
+			result.map = null;
 			result.mode = GameMode.CUSTOM;
 		}
 		else if(description.equals("Normal 3v3")) {
