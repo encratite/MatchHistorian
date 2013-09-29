@@ -75,7 +75,34 @@ public class MatchHistorian {
 		try(Statement statement = getAutomaticUpdateStatement(region, summonerId, enable)) {
 			int rowsAffected = statement.update();
 			if(rowsAffected == 0)
-				throw new MatchHistorianException("Unable to find summoner");
+				throw new MatchHistorianException("No such summoner");
+		}
+	}
+	
+	/**
+	 * Retrieve general information about a summoner stored in the database, including aggregated statistics.
+	 * This does not load the match history of the summoner, though, because it could be arbitrarily large. 
+	 * @param region the lolking.net lower case region string of the region the summoner resides on 
+	 * @param summonerId the numeric ID of the summoner on the game servers
+	 */
+	public Summoner getSummoner(String region, int summonerId) throws MatchHistorianException, SQLException {
+		try(Transaction transaction = new Transaction(database)) {
+			Summoner summoner;
+			try(Statement selectSummoner = getStatement("select id, region, summoner_id, name, update_automatically from summoner where region = ? and summoner_id = ?")) {
+				selectSummoner.setString(region);
+				selectSummoner.setInteger(summonerId);
+				ResultSet summonerResult = selectSummoner.query();
+				if(!summonerResult.first())
+					throw new MatchHistorianException("No such summoner");
+				summoner = new Summoner(summonerResult);
+			}
+			try(Statement selectStatistics = getStatement("select map, game_mode, champion_id, wins, losses, kills, deaths, assists, gold, minions_killed, duration from aggregated_statistics where summoner_id = ?")) {
+				selectStatistics.setInteger(summoner.id);
+				ResultSet statisticsResult = selectStatistics.query();
+				AggregatedStatistics statistics = new AggregatedStatistics(statisticsResult);
+				summoner.aggregatedStatistics.add(statistics);
+			}
+			return summoner;
 		}
 	}
 	

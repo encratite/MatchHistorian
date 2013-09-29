@@ -10,17 +10,17 @@ import java.util.ArrayList;
  */
 class Summoner {
 	// Identifier of the summoner in the database
-	int id;
+	public final int id;
 	// String that identifies the region the summoner resides on
-	String region;
+	public final String region;
 	// Identifier of the summoner on the server of that region
-	int summonerId;
+	public final int summonerId;
 	// Name of the summoner
-	String name;
+	public final String name;
 	// Flag that determines if a summoner is currently being updated automatically
-	boolean updateAutomatically;
-	// All aggregated statistics available for this summoner
-	ArrayList<AggregatedStatistics> aggregatedStatistics;
+	public final boolean updateAutomatically;
+	// All aggregated statistics available for this summoner, not loaded by the constructor
+	public final ArrayList<AggregatedStatistics> aggregatedStatistics;
 	
 	public Summoner(ResultSet result) throws SQLException {
 		id = result.getInt("id");
@@ -28,5 +28,6 @@ class Summoner {
 		summonerId = result.getInt("summoner_id");
 		name = result.getString("name");
 		updateAutomatically = result.getBoolean("update_automatically");
+		aggregatedStatistics = new ArrayList<>();
 	}
 }

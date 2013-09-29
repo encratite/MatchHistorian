@@ -49,6 +49,7 @@ create table game(
 	-- ID of the game on the server
 	game_id integer not null,
 	-- The map the game was played on
+	-- May be null because the map is not known at times
 	map map_type,
 	-- Queue type or custom game mode indicator
 	game_mode game_mode_type not null,
@@ -107,7 +108,8 @@ create table aggregated_statistics(
 	-- The player the stats are being recorded for
 	summoner_id integer references summoner(id) not null,
 	-- The map the games were played on
-	map map_type not null,
+	-- May be null because the map is not known at times
+	map map_type,
 	-- Queue type or custom game mode indicator for the games
 	game_mode game_mode_type not null,
 	-- Champion played by the player

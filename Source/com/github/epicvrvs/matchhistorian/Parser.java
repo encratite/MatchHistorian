@@ -31,7 +31,7 @@ public class Parser {
 		SimpleDateFormat inputDateFormat = new SimpleDateFormat("MM/dd/yy hh:mmaa zzz");
 		SimpleDateFormat outputDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 		outputDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-		ArrayList<GameResult> output = new ArrayList<GameResult>();
+		ArrayList<GameResult> output = new ArrayList<>();
 		for (Element gameElement : gameElements) {
 			GameResult game = new GameResult();
 			game.gameId = Integer.parseInt(gameElement.attr(dataGameId));
@@ -103,7 +103,7 @@ public class Parser {
 	}
 	
 	static ArrayList<GamePlayer> parseTeam(Element teamBody, int defaultSummonerId) throws ParserException {
-		ArrayList<GamePlayer> output = new ArrayList<GamePlayer>();
+		ArrayList<GamePlayer> output = new ArrayList<>();
 		Elements summonerElements = teamBody.getElementsByAttributeValue("style", "color: #FFF;");
 		Elements iconElements = teamBody.getElementsByAttributeValueContaining("style", "png");
 		for(int i = 0; i < summonerElements.size(); i++) {
@@ -136,6 +136,7 @@ public class Parser {
 	
 	static void setMapAndMode(String description, GameResult result) throws ParserException {
 		if(description.equals("Custom")) {
+			// Unknown
 			result.map = null;
 			result.mode = GameMode.CUSTOM;
 		}
@@ -167,16 +168,9 @@ public class Parser {
 			result.map = Map.SUMMONERS_RIFT;
 			result.mode = GameMode.RANKED_TEAM;
 		}
-		else if(description.equals("Co-Op Vs AI 3v3")) {
-			result.map = Map.TWISTED_TREELINE;
-			result.mode = GameMode.COOP_VS_AI;
-		}
-		else if(description.equals("Co-Op Vs AI 5v5")) {
-			result.map = Map.SUMMONERS_RIFT;
-			result.mode = GameMode.COOP_VS_AI;
-		}
-		else if(description.equals("Co-Op Vs AI Dominion")) {
-			result.map = Map.THE_CRYSTAL_SCAR;
+		else if(description.equals("Co-Op Vs AI")) {
+			// Unknown
+			result.map = null;
 			result.mode = GameMode.COOP_VS_AI;
 		}
 		else {
