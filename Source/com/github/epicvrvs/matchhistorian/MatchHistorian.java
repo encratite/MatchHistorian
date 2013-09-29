@@ -32,25 +32,25 @@ public class MatchHistorian {
 	 * @param summonerId the numeric ID of the summoner on the game servers
 	 */
 	public void updateSummoner(String region, int summonerId) throws MatchHistorianException, ParserException, SQLException, HTTPException {
-		SummonerWebData profile = getProfile(region, summonerId);
+		SummonerWebData summoner = getProfile(region, summonerId);
 		try(Transaction transaction = new Transaction(database)) {
-			Integer id = null;
+			Integer summonerDatabaseId = null;
 			// Check if the summoner needs to be added to the database
 			try(Statement select = getStatement("select id from summoner where region = ? and summoner_id = ?")) {
 				select.setString(region);
 				select.setInteger(summonerId);
 				ResultSet result = select.query();
 				if(result.first())
-					id = result.getInt("id");
+					summonerDatabaseId = result.getInt("id");
 			}
-			if(id == null) {
+			if(summonerDatabaseId == null) {
 				// The summoner is not in the database yet
 				try(Statement insert = getStatement("insert into summoner (region, summoner_id, name, update_automatically) values (?, ?, ?, true)")) {
 					insert.setString(region);
 					insert.setInteger(summonerId);
-					insert.setString(profile.name);
+					insert.setString(summoner.name);
 					insert.update();
-					id = insert.getInsertId();
+					summonerDatabaseId = insert.getInsertId();
 				}
 			}
 			else {
@@ -60,9 +60,8 @@ public class MatchHistorian {
 					update.update();
 				}
 			}
-			for(GameResult game : profile.games) {
-				processGameResult(region, id, game);
-			}
+			for(GameResult game : summoner.games)
+				processGameResult(region, summonerDatabaseId, summoner, game);
 		}
 	}
 	
@@ -130,7 +129,52 @@ public class MatchHistorian {
 		statement.setInteger(game.duration);
 	}
 	
-	void processGameResult(String region, int id, GameResult game) throws SQLException {
+	void insertTeamPlayers(SummonerWebData summoner, int gameDatabaseId, GameResult game, ArrayList<GamePlayer> team) throws SQLException {
+		for(GamePlayer player : team) {
+			try(Statement insertPlayer = getStatement("insert into game_player (game_id, summoner_id, champion_id, spells, kills, deaths, assists, items, gold, minions_killed) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+				insertPlayer.setInteger(gameDatabaseId);
+				insertPlayer.setInteger(player.summonerId);
+				insertPlayer.setInteger(player.championId);
+				if(player.summonerId == summoner.summonerId) {
+					// This is the player whose profile the data was extracted from so more information is available
+					insertPlayer.setArray(getArray(game.spells));
+					insertPlayer.setInteger(game.kills);
+					insertPlayer.setInteger(game.deaths);
+					insertPlayer.setInteger(game.assists);
+					insertPlayer.setArray(getArray(game.items));
+					insertPlayer.setInteger(game.gold);
+					insertPlayer.setInteger(game.minionsKilled);
+				}
+				else {
+					// It's another player so the other values are set to null
+					insertPlayer.setNull(Types.ARRAY);
+					insertPlayer.setNull(Types.INTEGER);
+					insertPlayer.setNull(Types.INTEGER);
+					insertPlayer.setNull(Types.INTEGER);
+					insertPlayer.setNull(Types.ARRAY);
+					insertPlayer.setNull(Types.INTEGER);
+					insertPlayer.setNull(Types.INTEGER);
+				}
+				insertPlayer.update();
+			}
+		}
+	}
+	
+	Array getArray(int[] array) throws SQLException {
+		Integer[] objectArray = new Integer[array.length];
+		for(int i = 0; i < array.length; i++)
+			objectArray[i] = array[i];
+		return database.createArrayOf("int", objectArray);
+	}
+	
+	Array getTeamIds(ArrayList<GamePlayer> team) throws SQLException {
+		Integer[] ids = new Integer[team.size()];
+		for(int i = 0; i < team.size(); i++)
+			ids[i] = team.get(i).summonerId;
+		return database.createArrayOf("int", ids);
+	}
+	
+	void processGameResult(String region, int summonerDatabaseId, SummonerWebData summoner, GameResult game) throws SQLException {
 		Integer gameId = null;
 		// Check if the game is in the database yet
 		try(Statement selectGameId = getStatement("select id from game where region = ? and game_id = ?")) {
@@ -142,28 +186,37 @@ public class MatchHistorian {
 		}
 		if(gameId == null) {
 			// The game wasn't in the database yet, add it
-			try(Statement insertGame = getStatement("insert into table game (region, game_id, map, game_mode, time, duration, losing_team, winning_team) values (?, ?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?)")) {
+			try(Statement insertGame = getStatement("insert into game (region, game_id, map, game_mode, time, duration, losing_team, winning_team) values (?, ?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?)")) {
 				insertGame.setString(region);
 				insertGame.setInteger(game.gameId);
 				insertGame.setString(GameResult.getMapString(game.map));
 				insertGame.setString(GameResult.getGameModeString(game.mode));
 				insertGame.setDate(new java.sql.Date(game.date.getTime()));
 				insertGame.setInteger(game.duration);
-				insertGame.setArray(GameResult.getTeamIds(database, game.losingTeam));
-				insertGame.setArray(GameResult.getTeamIds(database, game.winningTeam));
+				insertGame.setArray(getTeamIds(game.losingTeam));
+				insertGame.setArray(getTeamIds(game.winningTeam));
 				insertGame.update();
 				gameId = insertGame.getInsertId();
 			}
+			insertTeamPlayers(summoner, gameId, game, game.losingTeam);
+			insertTeamPlayers(summoner, gameId, game, game.winningTeam);
 		}
 		else {
 			// The game was already in the database so we have to make sure that these entries for the player are set
-			try(Statement update = getStatement("update game_player set spells = ?, kills = ?, deaths = ?, items = ?, gold = ?, minions_killed = ? where game_id = ? and summoner_id = ?")) {
+			try(Statement update = getStatement("update game_player set spells = ?, kills = ?, deaths = ?, assists = ?, items = ?, gold = ?, minions_killed = ? where game_id = ? and summoner_id = ?")) {
+				update.setArray(getArray(game.spells));
+				update.setInteger(game.kills);
+				update.setInteger(game.deaths);
+				update.setInteger(game.assists);
+				update.setArray(getArray(game.items));
+				update.setInteger(game.gold);
+				update.setInteger(game.minionsKilled);
 				update.update();
 			}
 		}
 		Integer statisticsId = null;
 		try(Statement selectStatisticsId = getStatement("select id from aggregated_statistics where summoner_id = ? and map = ?::map_type and game_mode = ?::game_mode_type and champion_id = ?")) {
-			selectStatisticsId.setInteger(id);
+			selectStatisticsId.setInteger(summonerDatabaseId);
 			selectStatisticsId.setString(GameResult.getMapString(game.map));
 			selectStatisticsId.setString(GameResult.getGameModeString(game.mode));
 			selectStatisticsId.setInteger(game.championId);
@@ -173,8 +226,8 @@ public class MatchHistorian {
 		}
 		if(statisticsId == null) {
 			// The entry didn't exist yet, create a new one first
-			try(Statement updateStatistics = getStatement("insert into table aggregated_statistics (summoner_id, map, game_mode, champion_id, wins, losses, kills, deaths, assists, gold, minions_killed, duration) values (?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
-				updateStatistics.setInteger(id);
+			try(Statement updateStatistics = getStatement("insert into aggregated_statistics (summoner_id, map, game_mode, champion_id, wins, losses, kills, deaths, assists, gold, minions_killed, duration) values (?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+				updateStatistics.setInteger(summonerDatabaseId);
 				updateStatistics.setString(GameResult.getMapString(game.map));
 				updateStatistics.setString(GameResult.getGameModeString(game.mode));
 				updateStatistics.setInteger(game.championId);

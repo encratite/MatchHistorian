@@ -1,14 +1,10 @@
 package com.github.epicvrvs.matchhistorian;
 
-import java.sql.Array;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 
 class GameResult {
 	public int gameId;
-	public int summonerId;
 	public boolean victory;
 	public int championId;
 	public Map map;
@@ -36,12 +32,5 @@ class GameResult {
 			return null;
 		else
 			return mode.toString().toLowerCase();
-	}
-	
-	public static Array getTeamIds(Connection database, ArrayList<GamePlayer> team) throws SQLException {
-		Integer[] ids = new Integer[team.size()];
-		for(int i = 0; i < team.size(); i++)
-			ids[i] = team.get(i).summonerId;
-		return database.createArrayOf("int", ids);
 	}
 }
