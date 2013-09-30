@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 public class Transaction implements AutoCloseable {
-	Connection database;
+	private Connection database;
 	
 	public Transaction(Connection database) throws SQLException {
 		this.database = database;

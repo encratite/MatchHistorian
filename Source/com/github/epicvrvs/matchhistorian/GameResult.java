@@ -4,33 +4,26 @@ import java.util.ArrayList;
 import java.util.Date;
 
 class GameResult {
-	public int gameId;
-	public boolean victory;
-	public int championId;
-	public Map map;
-	public GameMode mode;
-	public Date date;
-	public int duration;
-	public int kills;
-	public int deaths;
-	public int assists;
-	public int gold;
-	public int minionsKilled;
-	public int[] spells;
-	public int[] items;
-	public ArrayList<GamePlayer> losingTeam, winningTeam;
+	public final int gameId;
+	public final boolean victory;
+	public final int championId;
+	public final GameSettings gameSettings;
+	public final Date date;
+	public final PlayerStatistics playerStatistics;
+	public final int[] spells;
+	public final int[] items;
+	public final ArrayList<GamePlayer> losingTeam, winningTeam;
 	
-	public static String getMapString(Map map) {
-		if(map == null)
-			return null;
-		else
-			return map.toString().toLowerCase();
-	}
-	
-	public static String getGameModeString(GameMode mode) {
-		if(mode == null)
-			return null;
-		else
-			return mode.toString().toLowerCase();
+	public GameResult(int gameId, boolean victory, int championId, GameSettings gameSettings, Date date, PlayerStatistics playerStatistics, int[] spells, int[] items) {
+		this.gameId = gameId;
+		this.victory = victory;
+		this.championId = championId;
+		this.gameSettings = gameSettings;
+		this.date = date;
+		this.playerStatistics = playerStatistics;
+		this.spells = spells;
+		this.items = items;
+		losingTeam = new ArrayList<>();
+		winningTeam = new ArrayList<>();
 	}
 }

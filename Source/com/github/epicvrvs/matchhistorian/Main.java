@@ -9,7 +9,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 public class Main {
-	final static String configurationFile = "MatchHistorian.properties";
+	private final static String configurationFile = "MatchHistorian.properties";
 	
 	public static void main(String[] arguments) {
 		try {

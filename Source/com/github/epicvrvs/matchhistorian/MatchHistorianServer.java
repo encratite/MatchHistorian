@@ -14,7 +14,7 @@ import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
 public class MatchHistorianServer extends WebSocketServer {
-	MatchHistorian historian;
+	private MatchHistorian historian;
 	
 	public MatchHistorianServer(MatchHistorian historian, int port) throws UnknownHostException {
 		super(new InetSocketAddress(port));

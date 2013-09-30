@@ -18,7 +18,7 @@ import org.jsoup.nodes.Document;
 
 
 public class MatchHistorian {
-	Connection database;
+	private Connection database;
 	
 	public MatchHistorian(Connection database) {
 		this.database = database;
@@ -121,12 +121,12 @@ public class MatchHistorian {
 	void setStatisticsVariables(Statement statement, GameResult game) throws SQLException {
 		statement.setInteger(game.victory ? 1 : 0);
 		statement.setInteger(game.victory ? 0 : 1);
-		statement.setInteger(game.kills);
-		statement.setInteger(game.deaths);
-		statement.setInteger(game.assists);
-		statement.setInteger(game.gold);
-		statement.setInteger(game.minionsKilled);
-		statement.setInteger(game.duration);
+		statement.setInteger(game.playerStatistics.kills);
+		statement.setInteger(game.playerStatistics.deaths);
+		statement.setInteger(game.playerStatistics.assists);
+		statement.setInteger(game.playerStatistics.gold);
+		statement.setInteger(game.playerStatistics.minionsKilled);
+		statement.setInteger(game.playerStatistics.duration);
 	}
 	
 	void insertTeamPlayers(SummonerWebData summoner, int gameDatabaseId, GameResult game, ArrayList<GamePlayer> team) throws SQLException {
@@ -138,12 +138,12 @@ public class MatchHistorian {
 				if(player.summonerId == summoner.summonerId) {
 					// This is the player whose profile the data was extracted from so more information is available
 					insertPlayer.setArray(getArray(game.spells));
-					insertPlayer.setInteger(game.kills);
-					insertPlayer.setInteger(game.deaths);
-					insertPlayer.setInteger(game.assists);
+					insertPlayer.setInteger(game.playerStatistics.kills);
+					insertPlayer.setInteger(game.playerStatistics.deaths);
+					insertPlayer.setInteger(game.playerStatistics.assists);
 					insertPlayer.setArray(getArray(game.items));
-					insertPlayer.setInteger(game.gold);
-					insertPlayer.setInteger(game.minionsKilled);
+					insertPlayer.setInteger(game.playerStatistics.gold);
+					insertPlayer.setInteger(game.playerStatistics.minionsKilled);
 				}
 				else {
 					// It's another player so the other values are set to null
@@ -189,10 +189,10 @@ public class MatchHistorian {
 			try(Statement insertGame = getStatement("insert into game (region, game_id, map, game_mode, time, duration, losing_team, winning_team) values (?, ?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?)")) {
 				insertGame.setString(region);
 				insertGame.setInteger(game.gameId);
-				insertGame.setString(GameResult.getMapString(game.map));
-				insertGame.setString(GameResult.getGameModeString(game.mode));
+				insertGame.setString(GameSettings.getMapString(game.gameSettings.map));
+				insertGame.setString(GameSettings.getGameModeString(game.gameSettings.gameMode));
 				insertGame.setDate(new java.sql.Date(game.date.getTime()));
-				insertGame.setInteger(game.duration);
+				insertGame.setInteger(game.playerStatistics.duration);
 				insertGame.setArray(getTeamIds(game.losingTeam));
 				insertGame.setArray(getTeamIds(game.winningTeam));
 				insertGame.update();
@@ -205,20 +205,20 @@ public class MatchHistorian {
 			// The game was already in the database so we have to make sure that these entries for the player are set
 			try(Statement update = getStatement("update game_player set spells = ?, kills = ?, deaths = ?, assists = ?, items = ?, gold = ?, minions_killed = ? where game_id = ? and summoner_id = ?")) {
 				update.setArray(getArray(game.spells));
-				update.setInteger(game.kills);
-				update.setInteger(game.deaths);
-				update.setInteger(game.assists);
+				update.setInteger(game.playerStatistics.kills);
+				update.setInteger(game.playerStatistics.deaths);
+				update.setInteger(game.playerStatistics.assists);
 				update.setArray(getArray(game.items));
-				update.setInteger(game.gold);
-				update.setInteger(game.minionsKilled);
+				update.setInteger(game.playerStatistics.gold);
+				update.setInteger(game.playerStatistics.minionsKilled);
 				update.update();
 			}
 		}
 		Integer statisticsId = null;
 		try(Statement selectStatisticsId = getStatement("select id from aggregated_statistics where summoner_id = ? and map = ?::map_type and game_mode = ?::game_mode_type and champion_id = ?")) {
 			selectStatisticsId.setInteger(summonerDatabaseId);
-			selectStatisticsId.setString(GameResult.getMapString(game.map));
-			selectStatisticsId.setString(GameResult.getGameModeString(game.mode));
+			selectStatisticsId.setString(GameSettings.getMapString(game.gameSettings.map));
+			selectStatisticsId.setString(GameSettings.getGameModeString(game.gameSettings.gameMode));
 			selectStatisticsId.setInteger(game.championId);
 			ResultSet statisticsIdResult = selectStatisticsId.query();
 			if(statisticsIdResult.first())
@@ -228,8 +228,8 @@ public class MatchHistorian {
 			// The entry didn't exist yet, create a new one first
 			try(Statement updateStatistics = getStatement("insert into aggregated_statistics (summoner_id, map, game_mode, champion_id, wins, losses, kills, deaths, assists, gold, minions_killed, duration) values (?, ?::map_type, ?::game_mode_type, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
 				updateStatistics.setInteger(summonerDatabaseId);
-				updateStatistics.setString(GameResult.getMapString(game.map));
-				updateStatistics.setString(GameResult.getGameModeString(game.mode));
+				updateStatistics.setString(GameSettings.getMapString(game.gameSettings.map));
+				updateStatistics.setString(GameSettings.getGameModeString(game.gameSettings.gameMode));
 				updateStatistics.setInteger(game.championId);
 				setStatisticsVariables(updateStatistics, game);
 				updateStatistics.update();

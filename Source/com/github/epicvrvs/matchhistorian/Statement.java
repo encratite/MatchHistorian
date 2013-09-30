@@ -8,8 +8,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class Statement implements AutoCloseable {
-	PreparedStatement statement;
-	int index;
+	private PreparedStatement statement;
+	private int index;
 	
 	public Statement(Connection connection, String query) throws SQLException {
 		statement = connection.prepareStatement(query);

@@ -15,8 +15,8 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 public class Parser {
-	static Pattern integerPattern = Pattern.compile("\\d+");
-	static Pattern championIdPattern = Pattern.compile("(\\d+)_\\d+\\.png");
+	private final static Pattern integerPattern = Pattern.compile("\\d+");
+	private final static Pattern championIdPattern = Pattern.compile("(\\d+)_\\d+\\.png");
 	
 	public static String getName(Document document) throws ParserException {
 		Element nameElement = document.getElementsByAttributeValue("style", "font-size: 36px; line-height: 44px; white-space: nowrap;").first();
@@ -33,23 +33,23 @@ public class Parser {
 		outputDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 		ArrayList<GameResult> output = new ArrayList<>();
 		for (Element gameElement : gameElements) {
-			GameResult game = new GameResult();
-			game.gameId = Integer.parseInt(gameElement.attr(dataGameId));
-			game.victory = gameElement.className().equals("match_win");
+			int gameId = Integer.parseInt(gameElement.attr(dataGameId));
+			boolean victory = gameElement.className().equals("match_win");
 			Element icon = gameElement.getElementsByClass("summoner_icon_64").first();
 			String style = icon.attr("style");
 			Matcher championIdMatcher = championIdPattern.matcher(style);
 			if(!championIdMatcher.find())
 				throw new ParserException("Unable to extract champion ID");
-			game.championId = Integer.parseInt(championIdMatcher.group(1));
+			int championId = Integer.parseInt(championIdMatcher.group(1));
 			Element gameModeElement = gameElement.getElementsByAttributeValueContaining("style", "font-weight: bold").first();
 			String gameMode = gameModeElement.text();
-			setMapAndMode(gameMode, game);
+			GameSettings gameSettings = getGameSettings(gameMode);
 			final String dataHoverSwitch = "data-hoverswitch";
 			Element dateElement = gameElement.getElementsByAttribute(dataHoverSwitch).first();
 			String dateString = dateElement.attr(dataHoverSwitch);
+			Date date;
 			try {
-				game.date = inputDateFormat.parse(dateString);
+				date = inputDateFormat.parse(dateString);
 			}
 			catch(ParseException exception) {
 				throw new ParserException("Unable to parse date string", exception);
@@ -61,26 +61,26 @@ public class Parser {
 			Matcher durationMatcher = integerPattern.matcher(durationString);
 			if(!durationMatcher.find())
 				throw new ParserException("Unable to extract duration");
-			game.duration = Integer.parseInt(durationMatcher.group()) * 60;
+			int duration = Integer.parseInt(durationMatcher.group()) * 60;
 			Elements kdaElements = detailCells.get(3).getElementsByTag("strong");
-			game.kills = Integer.parseInt(kdaElements.get(0).text());
-			game.deaths = Integer.parseInt(kdaElements.get(1).text());
-			game.assists = Integer.parseInt(kdaElements.get(2).text());
+			int kills = Integer.parseInt(kdaElements.get(0).text());
+			int deaths = Integer.parseInt(kdaElements.get(1).text());
+			int assists = Integer.parseInt(kdaElements.get(2).text());
 			String goldString = detailCells.get(4).getElementsByTag("strong").first().text();
-			game.gold = (int)(Float.parseFloat(goldString.substring(0, goldString.length() - 1)) * 1000);
-			game.minionsKilled = Integer.parseInt(detailCells.get(5).getElementsByTag("strong").first().text());
+			int gold = (int)(Float.parseFloat(goldString.substring(0, goldString.length() - 1)) * 1000);
+			int minionsKilled = Integer.parseInt(detailCells.get(5).getElementsByTag("strong").first().text());
 			Elements spellsElements = detailCells.get(6).getElementsByClass("icon_36");
-			game.spells = new int[2];
-			for(int i = 0; i < game.spells.length; i++) {
+			int[] spells = new int[2];
+			for(int i = 0; i < spells.length; i++) {
 				String spellStyle = spellsElements.get(i).attr("style");
 				Matcher spellMatcher = integerPattern.matcher(spellStyle);
 				if(!spellMatcher.find())
 					throw new ParserException("Unable to extract summoner spells");
-				game.spells[i] = Integer.parseInt(spellMatcher.group());
+				spells[i] = Integer.parseInt(spellMatcher.group());
 			}
 			Elements itemElements = detailCells.get(7).getElementsByAttributeValue("style", "display: table-cell; padding: 2px; width: 34px; height: 34px;");
-			game.items = new int[6];
-			for(int i = 0; i < game.items.length; i++) {
+			int[] items = new int[6];
+			for(int i = 0; i < items.length; i++) {
 				Elements links = itemElements.get(i).getElementsByTag("a");
 				int item = 0;
 				if(links.size() != 0) {
@@ -89,21 +89,22 @@ public class Parser {
 						throw new ParserException("Unable to extract item ID");
 					item = Integer.parseInt(itemMatcher.group());
 				}
-				game.items[i] = item;
+				items[i] = item;
 			}
 			Element extendedDetails = gameElement.getElementsByClass("match_details_extended").first();
 			Elements teams = extendedDetails.getElementsByTag("tbody");
 			Element losingTeamBody = gameElement.getElementsContainingOwnText("Losing Team").first().parent().parent().parent();
 			Element winningTeamBody = gameElement.getElementsContainingOwnText("Winning Team").first().parent().parent().parent();
-			game.losingTeam = parseTeam(losingTeamBody, summonerId);
-			game.winningTeam = parseTeam(winningTeamBody, summonerId);
+			PlayerStatistics playerStatistics = new PlayerStatistics(kills, deaths, assists, gold, minionsKilled, duration);
+			GameResult game = new GameResult(gameId, victory, championId, gameSettings, date, playerStatistics, spells, items);
+			parseTeam(losingTeamBody, summonerId, game.winningTeam);
+			parseTeam(winningTeamBody, summonerId, game.losingTeam);
 			output.add(game);
 		}
 		return output;
 	}
 	
-	static ArrayList<GamePlayer> parseTeam(Element teamBody, int defaultSummonerId) throws ParserException {
-		ArrayList<GamePlayer> output = new ArrayList<>();
+	private static void parseTeam(Element teamBody, int defaultSummonerId, ArrayList<GamePlayer> output) throws ParserException {
 		Elements summonerElements = teamBody.getElementsByAttributeValue("style", "color: #FFF;");
 		Elements iconElements = teamBody.getElementsByAttributeValueContaining("style", "png");
 		for(int i = 0; i < summonerElements.size(); i++) {
@@ -131,50 +132,28 @@ public class Parser {
 			GamePlayer player = new GamePlayer(name, summonerId, championId);
 			output.add(player);
 		}
-		return output;
 	}
 	
-	static void setMapAndMode(String description, GameResult result) throws ParserException {
-		if(description.equals("Custom")) {
-			// Unknown
-			result.map = null;
-			result.mode = GameMode.CUSTOM;
-		}
-		else if(description.equals("Normal 3v3")) {
-			result.map = Map.TWISTED_TREELINE;
-			result.mode = GameMode.NORMAL;
-		}
-		else if(description.equals("Normal 5v5")) {
-			result.map = Map.SUMMONERS_RIFT;
-			result.mode = GameMode.NORMAL;
-		}
-		else if(description.equals("Dominion")) {
-			result.map = Map.THE_CRYSTAL_SCAR;
-			result.mode = GameMode.NORMAL;
-		}
-		else if(description.equals("Howling Abyss")) {
-			result.map = Map.HOWLING_ABYSS;
-			result.mode = GameMode.NORMAL;
-		}
-		else if(description.equals("Ranked Team 3v3")) {
-			result.map = Map.TWISTED_TREELINE;
-			result.mode = GameMode.RANKED_TEAM;
-		}
-		else if(description.equals("Ranked Solo 5v5")) {
-			result.map = Map.SUMMONERS_RIFT;
-			result.mode = GameMode.RANKED_SOLO;
-		}
-		else if(description.equals("Ranked Team 5v5")) {
-			result.map = Map.SUMMONERS_RIFT;
-			result.mode = GameMode.RANKED_TEAM;
-		}
-		else if(description.equals("Co-Op Vs AI")) {
-			// Unknown
-			result.map = null;
-			result.mode = GameMode.COOP_VS_AI;
-		}
-		else {
+	private static GameSettings getGameSettings(String description) throws ParserException {
+		if(description.equals("Custom"))
+			return new GameSettings(null, GameMode.CUSTOM);
+		else if(description.equals("Normal 3v3"))
+			return new GameSettings(Map.TWISTED_TREELINE, GameMode.NORMAL);
+		else if(description.equals("Normal 5v5"))
+			return new GameSettings(Map.SUMMONERS_RIFT, GameMode.NORMAL);
+		else if(description.equals("Dominion"))
+			return new GameSettings(Map.THE_CRYSTAL_SCAR, GameMode.NORMAL);
+		else if(description.equals("Howling Abyss"))
+			return new GameSettings(Map.HOWLING_ABYSS, GameMode.NORMAL);
+		else if(description.equals("Ranked Team 3v3"))
+			return new GameSettings(Map.TWISTED_TREELINE, GameMode.RANKED_TEAM);
+		else if(description.equals("Ranked Solo 5v5"))
+			return new GameSettings(Map.SUMMONERS_RIFT, GameMode.RANKED_SOLO);
+		else if(description.equals("Ranked Team 5v5"))
+			return new GameSettings(Map.SUMMONERS_RIFT, GameMode.RANKED_TEAM);
+		else if(description.equals("Co-Op Vs AI"))
+			return new GameSettings(null, GameMode.COOP_VS_AI);
+		else
 			throw new ParserException("Unknown map/mode description: " + description);
-		}
 	}
 }
