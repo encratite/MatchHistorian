@@ -4,6 +4,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="Library/jsoup-1.7.2.jar"/>
 	<classpathentry kind="lib" path="Library/postgresql-9.2-1003.jdbc4.jar"/>
-	<classpathentry kind="lib" path="Library/java_websocket.jar"/>
+	<classpathentry kind="lib" path="Library/lanterna-2.1.6.jar"/>
 	<classpathentry kind="output" path="Binary"/>
 </classpath>

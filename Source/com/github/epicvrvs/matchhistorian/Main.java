@@ -17,7 +17,6 @@ public class Main {
 			properties.load(new FileInputStream(configurationFile));
 			String databaseURL = properties.getProperty("databaseURL");
 			String databaseUser = properties.getProperty("databaseUser");
-			int webSocketPort = Integer.parseInt(properties.getProperty("webSocketPort"));
 			
 			Properties databaseProperties = new Properties();
 			databaseProperties.setProperty("user", databaseUser);
